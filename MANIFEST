@@ -8,8 +8,10 @@ test.pl
 sub/Makefile.PL
 sub/EGAuthors.pm
 sub/Freshmeat.pm
+sub/General.pm
 sub/LinuxToday.pm
 sub/ListSubs.pm
 sub/SiteNews.pm
 sub/Slashdot.pm
 sub/YahooBiz.pm
+webfetch-pb.gif

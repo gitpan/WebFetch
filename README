@@ -128,6 +128,58 @@ WebFetch FUNCTIONS
             functions. Though it works with all the modules that
             come included with the WebFetch package itself.)
 
+    --ns_export *ns-export-file*
+            (optional) save a MyNetscape export copy of the fetched
+            info into the file named by this parameter. If this
+            optional parameter is used, three additional parameters
+            become required: --ns_site_title, --ns_site_link, and --
+            ns_site_desc. If you want to include an icon in the
+            channel display, you should also use --ns_image_title
+            and --ns_image_url. A URL Prefix must also be set for
+            this to work correctly, which can be supplied via the
+            the --url_prefix parameter or in the *url-prefix* line
+            of the WebFetch::SiteNews news input file.
+
+For more info see http://my.netscape.com/publish/
+
+    --ns_site_title *site-title*
+            (required if --ns_export is used) For exporting to
+            MyNetscape, this sets the name of your site. It cannot
+            be more than 40 characters
+
+    --ns_site_link *site-link*
+            (required if --ns_export is used) For exporting to
+            MyNetscape, this is the full URL MyNetscape will use to
+            link to your site. It cannot be more than 500
+            characters.
+
+    --ns_site_desc *site-description*
+            (required if --ns_export is used) For exporting to
+            MyNetscape, this is a short description of your site. It
+            cannot be more than 500 characters.
+
+    --ns_image_title *image-title*
+            (optional) For exporting to MyNetscape, this is the
+            title (alt) text for the icon image.
+
+    --ns_image_url *image-url*
+            (optional) For exporting to MyNetscape, this is the URL
+            MyNetscpae will use for your icon image. If this is
+            present, the link on the image will be the same as your
+            --ns_site_link parameter.
+
+    --url_prefix *url-prefix*
+            (optional) include a URL prefix to use on the saved URLs
+            on --ns_export output files. (It could also be used in
+            the future by other output formats that need URL
+            prefixes.) This is considered optional by WebFetch
+            though you will probably need it for MyNetscape to
+            properly link to your site. This information can also be
+            supplied via the *url-prefix* line of the
+            WebFetch::SiteNews news input file. If it is set in the
+            WebFetch::SiteNews, it will override the --url_prefix
+            command line parameter.
+
     --quiet (optional) suppress printed warnings for HTTP errors
             *(applies only to modules which use the WebFetch::get()
             function)* in case they are not desired for cron outputs
@@ -229,6 +281,56 @@ WebFetch FUNCTIONS
     $param  (optional) a reference to a hash of global parameters for
             the exported data. This is currently unused but reserved
             for future versions of WebFetch.
+
+    $obj->ns_export ( $filename, $lines )
+        This WebFetch utility function generates contents for a
+        MyNetscape export file, which can be placed on a web server
+        to be read by the MyNetscape site (my.netscape.com) if you
+        create a "channel" for your site at MyNetscape.
+
+        Of the modules included with WebFetch, only
+        WebFetch::SiteNews and WebFetch::Genercal call $obj-
+        >ns_export(). The others will ignore it (because they're
+        just obtaining data from other sites themselves.) You may
+        use $obj->ns_export() in your own modules which inherit from
+        WebFetch.
+
+For more info see http://my.netscape.com/publish/
+
+        $obj->ns_export has the following parameters:
+
+    $filename
+            the file to save the WebFetch export contents to; this
+            will be placed in the savable record with the contents
+            so the save function knows were to write them
+
+    $lines  a reference to an array of arrays; the outer array contains
+            each line of the exported data; the inner array is a
+            list of two fields within that line consisting of a text
+            title string in one entry and a URL in the second entry.
+
+    $site_title
+            For exporting to MyNetscape, this sets the name of your
+            site. It cannot be more than 40 characters
+
+    $site_link
+            For exporting to MyNetscape, this is the full URL
+            MyNetscape will use to link to your site. It cannot be
+            more than 500 characters.
+
+    $site_desc
+            For exporting to MyNetscape, this is a short description
+            of your site. It cannot be more than 500 characters.
+
+    $image_title
+            (optional) For exporting to MyNetscape, this is the
+            title (alt) text for the icon image.
+
+    $image_url
+            (optional) For exporting to MyNetscape, this is the URL
+            MyNetscpae will use for your icon image. If this is
+            present, the link on the image will be the same as your
+            $site_link parameter.
 
     $obj->html_gen( $filename, $format_func, $links, [ $style ] )
         This WebFetch utility function generates some common formats
@@ -355,6 +457,12 @@ WebFetch FUNCTIONS
         functionality. But if you used anyone else's code, retain
         the existing author credits in any module you modify to make
         a new one.
+
+    export function
+        If it's appropriate for users of your module to be able to
+        export its data to other sites, add an export() function.
+        Use the one in WebFetch::SiteNews as an example if you need
+        to.
 
     Please consider contributing any useful changes back to the
     WebFetch project at `webfetch-maint@svlug.org'.

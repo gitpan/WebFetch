@@ -1,5 +1,18 @@
 Revision history for Perl extension WebFetch
 
 0.01  Mon Jan 11 02:56:15 PST 1999
-	- original version
+      - original version
+	(Though this is the first beta of WebFetch, this is a second
+	generation of code used to handle web-gathered news by SVLUG)
 
+0.02  Fri Jan 15 02:33:34 PST 1999
+      - fixed a test.pl typo
+      - added WebFetch::General module to read WebFetch::wf_export format
+      - added webfetch-pb.gif "powered by" image
+      - added documentation to WebFetch::SiteNews
+      - added --ns_export (MyNetscape export)
+
+0.03  Sun Mar 21 22:22:03 PST 1999
+      - added documentation to WebFetch::General
+      - updated --ns_export capability when Netscape switched to use RDF
+      - fixed off-by-one error in WebFetch::SiteNews short news output

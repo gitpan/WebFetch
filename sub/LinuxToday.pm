@@ -9,7 +9,7 @@
 package WebFetch::LinuxToday;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @Options );
+use vars qw($VERSION @ISA @EXPORT @Options $Usage );
 
 use Exporter;
 use AutoLoader;
@@ -19,10 +19,9 @@ use WebFetch;;
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
-@EXPORT = qw( fetch_main
-
-);
+@EXPORT = qw( fetch_main );
 #@Options = ();  # No command-line options added by this module1
+#$Usage = "";    # No additions to the usage error message
 
 # configuration parameters
 $WebFetch::LinuxToday::filename = "linuxtoday.html";

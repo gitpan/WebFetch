@@ -7,6 +7,20 @@
 # free software; you can redistribute it and/or modify it under the
 # same terms as Perl itself.
 #
+# $Revision: 1.16 $
+# $Log: WebFetch.pm,v $
+# Revision 1.16  1999/03/22 06:26:15  ikluft
+# added MyNetscape export
+#
+# Revision 1.15  1999/03/20 08:28:44  ikluft
+# WebFetch 0.02 checkpoint
+# added first pass at MyNetscape exporting, then they completely changed
+# the format (grrrr...)
+#
+# Revision 1.14  1999/02/08 03:55:34  ikluft
+# fixed typo in variable name, added RCS revision/log
+#
+#
 package WebFetch;
 
 =head1 NAME
@@ -118,7 +132,7 @@ use Data::Dumper;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw( );
-$VERSION = '0.01';
+$VERSION = '0.03';
 my $debug;
 
 # Preloaded methods go here.
@@ -195,6 +209,73 @@ simply by omiting the export step from their fetch() functions.
 Though it works with all the modules that come included with the
 WebFetch package itself.)
 
+=item --ns_export I<ns-export-file>
+
+(optional) save a MyNetscape export copy of the fetched info
+into the file named by this parameter.
+If this optional parameter is used, three additional parameters
+become required: --ns_site_title, --ns_site_link, and --ns_site_desc.
+If you want to include an icon in the channel display,
+you should also use --ns_image_title and --ns_image_url.
+A URL Prefix must also be set for this to work correctly,
+which can be supplied via the
+the --url_prefix parameter or in the I<url-prefix> line of the
+WebFetch::SiteNews news input file.
+
+=for html
+For more info see <a href="http://my.netscape.com/publish/">http://my.netscape.com/publish/</a>
+
+=for text
+For more info see http://my.netscape.com/publish/
+
+=for man
+For more info see http://my.netscape.com/publish/
+
+=item --ns_site_title I<site-title>
+
+(required if --ns_export is used)
+For exporting to MyNetscape, this sets the name of your site.
+It cannot be more than 40 characters
+
+=item --ns_site_link I<site-link>
+
+(required if --ns_export is used)
+For exporting to MyNetscape, this is the full URL MyNetscape will
+use to link to your site.
+It cannot be more than 500 characters.
+
+=item --ns_site_desc I<site-description>
+
+(required if --ns_export is used)
+For exporting to MyNetscape, this is a short description of your site.
+It cannot be more than 500 characters.
+
+=item --ns_image_title I<image-title>
+
+(optional)
+For exporting to MyNetscape, this is the title (alt) text for the icon image.
+
+=item --ns_image_url I<image-url>
+
+(optional)
+For exporting to MyNetscape, this is the URL MyNetscpae will use
+for your icon image.
+If this is present, the link on the image will be the same as your
+--ns_site_link parameter.
+
+=item --url_prefix I<url-prefix>
+
+(optional) include a URL prefix to use on the saved URLs on --ns_export
+output files.
+(It could also be used in the future by other output formats that need
+URL prefixes.)
+This is considered optional by WebFetch though you will probably need
+it for MyNetscape to properly link to your site.
+This information can also be supplied via the
+I<url-prefix> line of the WebFetch::SiteNews news input file.
+If it is set in the WebFetch::SiteNews,
+it will override the --url_prefix command line parameter.
+
 =item --quiet
 
 (optional) suppress printed warnings for HTTP errors
@@ -223,13 +304,23 @@ parameters, as they should appear in the usage message.
 sub run
 {
 	my ( $caller_pkg, $caller_file, $caller_line ) = caller;
-	my ( $obj, $dir, $group, $mode, $export, $quiet );
+	my ( $obj, $dir, $group, $mode, $export, $ns_export, $quiet,
+		$url_prefix, $ns_site_title, $ns_site_link, $ns_site_desc,
+		$ns_image_title, $ns_image_url );
+
 
 	my $result = GetOptions (
 		"dir=s" => \$dir,
 		"group:s" => \$group,
 		"mode:s" => \$mode, 
 		"export:s" => \$export,
+		"ns_export:s" => \$ns_export,
+		"ns_site_title:s" => \$ns_site_title,
+		"ns_site_link:s" => \$ns_site_link,
+		"ns_site_desc:s" => \$ns_site_desc,
+		"ns_image_title:s" => \$ns_image_title,
+		"ns_image_url:s" => \$ns_image_url,
+		"url_prefix:s" => \$url_prefix,
 		"quiet" => \$quiet,
 		"debug" => \$debug,
 		( eval "defined \@".$caller_pkg."::Options" )
@@ -237,8 +328,12 @@ sub run
 			: ());
 	if ( ! $result ) {
 		print STDERR "usage: $0 --dir dirpath "
-			."[--group group] [--mode mode] [--export file] "
-			."[--quiet]\n";
+			."[--group group] [--mode mode] [--export file]\n";
+		print STDERR "   [--ns_export file] [--ns_site_title title] "
+			."[--ns_site_link url] [--ns_site_desc text]\n";
+		print STDERR "   [--ns_image_title title] "
+			."[--ns_image_url url] [--url_prefix prefix]\n";
+		print STDERR "[--quiet]\n";
 		if ( eval "defined \$".$caller_pkg."::Usage" ) {
 			print STDERR "   "
 				.( eval "\$".$caller_pkg."::Usage" )."\n";
@@ -252,6 +347,13 @@ sub run
 		(defined $mode) ? ( "mode" => $mode ) : (),
 		(defined $debug) ? ( "debug" => $debug ) : (),
 		(defined $export) ? ( "export" => $export ) : (),
+		(defined $ns_export) ? ( "ns_export" => $ns_export ) : (),
+		(defined $ns_site_title) ? ( "ns_site_title" => $ns_site_title ) : (),
+		(defined $ns_site_link) ? ( "ns_site_link" => $ns_site_link ) : (),
+		(defined $ns_site_desc) ? ( "ns_site_desc" => $ns_site_desc ) : (),
+		(defined $ns_image_title) ? ( "ns_image_title" => $ns_image_title ) : (),
+		(defined $ns_image_url) ? ( "ns_image_url" => $ns_image_url ) : (),
+		(defined $url_prefix) ? ( "url_prefix" => $url_prefix ) : (),
 		(defined $quiet) ? ( "quiet" => $quiet ) : (),
 		)';
 	if ( $@ ) {
@@ -466,7 +568,8 @@ sub wf_export
 	# generate output header
 	push @export_out, "[WebFetch export]";
 	push @export_out, "Version: $VERSION";
-	push @export_out, "# This was generated by the Perl5 WebFetch module.";
+	push @export_out, "# This was generated by the Perl5 WebFetch "
+		."$VERSION module.";
 	push @export_out, "# WebFetch info can be found at "
 		."http://www.svlug.org/sw/webfetch/";
 	if ( defined $comment ) {
@@ -491,6 +594,164 @@ sub wf_export
 			push @export_out, $fields->[$field].": $item";
 		}
 	}
+
+	# store contents
+	$self->raw_savable( $filename,
+		join ( "\n", @export_out )."\n" );
+}
+
+
+=item $obj->ns_export ( $filename, $lines )
+
+This WebFetch utility function generates contents for a MyNetscape export
+file, which can be placed on a web server to be read by the MyNetscape
+site (my.netscape.com) if you create a "channel" for your site at MyNetscape.
+
+Of the modules included with WebFetch, only WebFetch::SiteNews and
+WebFetch::Genercal call $obj->ns_export().
+The others will ignore it (because they're just obtaining data from
+other sites themselves.)
+You may use $obj->ns_export()
+in your own modules which inherit from WebFetch.
+
+=for html
+For more info see <a href="http://my.netscape.com/publish/">http://my.netscape.com/publish/</a>
+
+=for text
+For more info see http://my.netscape.com/publish/
+
+=for man
+For more info see http://my.netscape.com/publish/
+
+$obj->ns_export has the following parameters:
+
+=over 4
+
+=item $filename
+
+the file to save the WebFetch export contents to;
+this will be placed in the savable record with the contents
+so the save function knows were to write them
+
+=item $lines
+
+a reference to an array of arrays;
+the outer array contains each line of the exported data;
+the inner array is a list of two fields within that line
+consisting of a text title string in one entry and a
+URL in the second entry.
+
+=item $site_title
+
+For exporting to MyNetscape, this sets the name of your site.
+It cannot be more than 40 characters
+
+=item $site_link
+
+For exporting to MyNetscape, this is the full URL MyNetscape will
+use to link to your site.
+It cannot be more than 500 characters.
+
+=item $site_desc
+
+For exporting to MyNetscape, this is a short description of your site.
+It cannot be more than 500 characters.
+
+=item $image_title
+
+(optional)
+For exporting to MyNetscape, this is the title (alt) text for the icon image.
+
+=item $image_url
+
+(optional)
+For exporting to MyNetscape, this is the URL MyNetscpae will use
+for your icon image.
+If this is present, the link on the image will be the same as your
+$site_link parameter.
+
+=back
+
+=cut
+
+# utility function to generate MyNetscape export format
+# this can be used to export to MyNetscape channels (if you create one)
+# for more info see http://my.netscape.com/publish/
+sub ns_export
+{
+	my ( $self, $filename, $lines, $site_title, $site_link, $site_desc,
+		$image_title, $image_url ) = @_;
+	my ( @export_out, $line );
+
+
+	if ( $self->{debug}) {
+		print STDERR "debug: entered ns_export, output to $filename\n";
+	}
+
+	# validate parameters
+	if ( ! ref $lines or ref $lines ne "ARRAY" ) {
+		die "WebFetch: ns_export error: lines parameter is not an "
+			."array reference\n";
+	}
+	if (( !defined $site_title ) or ( !defined $site_link ) or
+		( !defined $site_desc ))
+	{
+		my @missing;
+		( !defined $site_title ) and push @missing, "site_title";
+		( !defined $site_link ) and push @missing, "site_link";
+		( !defined $site_desc ) and push @missing, "site_desc";
+		die "WebFetch: ns_export error: missing required parameters: "
+			.join( " ", @missing )."\n";
+	}
+
+	# generate RDF header
+	push @export_out, "<?xml version=\"1.0\"?>";
+	push @export_out, "<rdf:RDF";
+	push @export_out, "xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"";
+	push @export_out, "xmlns=\"http://my.netscape.com/rdf/simple/0.9/\">";
+	push @export_out, "";
+	push @export_out, "  <channel>";
+	push @export_out, "    <title>$site_title</title>";
+	push @export_out, "    <link>$site_link</link>";
+	push @export_out, "    <description>$site_desc</description>";
+	push @export_out, "  </channel>";
+	if ( defined $image_url ) {
+		push @export_out, "";
+		push @export_out, "  <image>";
+		push @export_out, "    <title>"
+			.((defined $image_title) ? $image_title : $site_title )
+			."</title>";
+		push @export_out, "    <url>$image_url</url>";
+		push @export_out, "    <link>$site_link</link>";
+		push @export_out, "  </image>";
+	}
+
+	# generate contents, each field has items in RFC822-like style
+	my $max_item_count = 15;
+	my $item_count = 0;
+	foreach $line ( @$lines ) {
+		my ( $title, $url ) = @$line;
+		$title =~ s/\n\n+/\n/sgo;     # remove blank lines
+		$title =~ s/^\n+//o;          # remove leading newlines
+		$title =~ s/\n+$//o;          # remove trailing newlines
+		$title =~ s/\n/ /sgo;         # remove newlines
+		$title =~ s/^\s*//o;          # remove leading whitespace
+		$title =~ s/\s*$//o;          # remove trailing whitespace
+		$title =~ s/\&/&amp;/go;      # encode ampersands
+		$title =~ s/\"/&quot;/go;     # encode quotes
+		$title =~ s/\</&lt;/go;       # encode less-thans
+		$title =~ s/\>/&gt;/go;       # encode greater-thans
+		push @export_out, "";
+		push @export_out, "  <item>";
+		push @export_out, "    <title>$title</title>";
+		push @export_out, "    <link>$url</link>";
+		push @export_out, "  </item>";
+		( $item_count++ < $max_item_count - 1 ) or last;
+	}
+
+	# generate RDF footer
+	push @export_out, "";
+	push @export_out, "</rdf:RDF>";
 
 	# store contents
 	$self->raw_savable( $filename,
@@ -842,7 +1103,7 @@ sub save
 	foreach $savable ( @{$self->{savable}}) {
 		if ( defined $savable->{error}) {
 			print STDERR "WebFetch: failed to save "
-				.$savable->{name}.": "
+				.$savable->{file}.": "
 				.$savable->{error}."\n";
 			$err_count++;
 		}
@@ -901,6 +1162,12 @@ and remove old documentation for any you removed.
 Add yourself as an author if you added any significant functionality.
 But if you used anyone else's code, retain the existing author credits
 in any module you modify to make a new one.
+
+=item export function
+
+If it's appropriate for users of your module to be able to export its
+data to other sites, add an export() function.
+Use the one in WebFetch::SiteNews as an example if you need to.
 
 =back
 
