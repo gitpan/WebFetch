@@ -13,6 +13,7 @@ use vars qw($VERSION @ISA @EXPORT @Options $Usage $input $short_path $long_path 
 
 use Exporter;
 use AutoLoader;
+use Carp;
 use WebFetch;;
 use Date::Calc qw(Delta_Days);;
 
@@ -72,7 +73,7 @@ sub fetch
 
 	# parse data file
 	if ( ! open ( news_data, $input )) {
-		die "$0: failed to open $input: $!\n";
+		croak "$0: failed to open $input: $!\n";
 	}
 	my @news_items = ();
 	my $position = 0;
@@ -252,15 +253,15 @@ sub gen_label
 	my ( $label_hash, $label_list, $news ) = @_;
 
 	if ( ref($label_hash) ne "HASH" ) {
-		die "WebFetch::SiteNews: label_hash parameter to gen_label "
+		croak "WebFetch::SiteNews: label_hash parameter to gen_label "
 			."is not a hash reference\n";
 	}
 	if ( ref($label_list) ne "ARRAY" ) {
-		die "WebFetch::SiteNews: label_list parameter to gen_label "
+		croak "WebFetch::SiteNews: label_list parameter to gen_label "
 			."is not an array reference\n";
 	}
 	if ( ref($news) ne "HASH" ) {
-		die "WebFetch::SiteNews: news parameter to gen_label "
+		croak "WebFetch::SiteNews: news parameter to gen_label "
 			."is not a hash reference\n";
 	}
 	my ( $i, $label );

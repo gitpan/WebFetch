@@ -68,12 +68,12 @@ sub fetch
 	@lines = split ( /\n/, $$content );
 	$state = 0;
 	foreach ( @lines ) {
-		if ( $state == 0 and /<!--IL-->/ ) {
+		if ( $state == 0 and /<td width=\"95\%\">/ ) {
 			$state = 1;
 			next;
-		} elsif ( $state == 1 and /^<!--IT-->.*<a href=\"([^"]+)\">(.*)<\/a>/i ) {
+		} elsif ( $state == 1 and /^<b><a href=\"([^"]+)\">(.*)<\/a><\/b>/i ) {
 			push ( @content_links, [ $1, $2 ]);
-		} elsif ( $state == 1 and ( /<!--\/IL-->/i )) {
+		} elsif ( $state == 1 and ( /<table width=\"100\%\">/i )) {
 			last;
 		}
 	}

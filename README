@@ -180,6 +180,17 @@ For more info see http://my.netscape.com/publish/
             WebFetch::SiteNews, it will override the --url_prefix
             command line parameter.
 
+    --font_size *number*
+            (optional) choose a font size for generated HTML text.
+            This will be used in a font tag so it may be relative,
+            like "-1" or "+1".
+
+    --font_face *string*
+            (optional) choose a font face for generated HTML text.
+            This will be used in a font tag so it may be any
+            standard font name or a list. For example, for a sans-
+            serif font, use "`Helvetica,Arial,sans-serif'".
+
     --quiet (optional) suppress printed warnings for HTTP errors
             *(applies only to modules which use the WebFetch::get()
             function)* in case they are not desired for cron outputs
@@ -481,7 +492,8 @@ A current copy of the source code and documentation may be found at
 http://www.svlug.org/sw/webfetch/
 
 SEE ALSO
-perl(1), WebFetch::EGAuthors, WebFetch::Freshmeat, WebFetch::LinuxToday,
-WebFetch::ListSubs, WebFetch::SiteNews, WebFetch::Slashdot,
-WebFetch::YahooBiz.
+perl(1), WebFetch::CNNsearch, WebFetch::COLA, WebFetch::EGAuthors,
+WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
+WebFetch::PerlStruct,
+WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
 

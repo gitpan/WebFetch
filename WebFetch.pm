@@ -7,8 +7,19 @@
 # free software; you can redistribute it and/or modify it under the
 # same terms as Perl itself.
 #
-# $Revision: 1.18 $
+# $Revision: 1.21 $
 # $Log: WebFetch.pm,v $
+# Revision 1.21  1999/05/05 00:17:28  ikluft
+# we have been informed that the RDF format used by MyNetscape is actually
+# Reuters Distribution Format.  This is now documented.
+#
+# Revision 1.20  1999/05/05 00:09:30  ikluft
+# bump version to 0.06, add references to WebFetch::PerlStruct
+# ./
+#
+# Revision 1.19  1999/04/11 13:57:09  ikluft
+# bump version to 0.05
+#
 # Revision 1.18  1999/04/09 01:58:20  ikluft
 # added font_size/font_face, added references to WebFetch::CNNsearch
 # and WebFetch::COLA.
@@ -139,7 +150,7 @@ use Data::Dumper;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw( );
-$VERSION = '0.04';
+$VERSION = '0.06';
 my $debug;
 
 # Preloaded methods go here.
@@ -237,6 +248,11 @@ For more info see http://my.netscape.com/publish/
 
 =for man
 For more info see http://my.netscape.com/publish/
+
+I<Note that MyNetscape uses Reuters Distribution Format (RDF) for its
+imports.  So this format may be readable by any other sites who can
+read data from Reuters.  You should use the ".rdf" suffix on file names
+that use this format.>
 
 =item --ns_site_title I<site-title>
 
@@ -1261,6 +1277,7 @@ http://www.svlug.org/sw/webfetch/
 <a href="WebFetch::Freshmeat.html">WebFetch::Freshmeat</a>,
 <a href="WebFetch::LinuxToday.html">WebFetch::LinuxToday</a>,
 <a href="WebFetch::ListSubs.html">WebFetch::ListSubs</a>,
+<a href="WebFetch::PerlStruct.html">WebFetch::PerlStruct</a>,
 <a href="WebFetch::SiteNews.html">WebFetch::SiteNews</a>,
 <a href="WebFetch::Slashdot.html">WebFetch::Slashdot</a>,
 <a href="WebFetch::YahooBiz.html">WebFetch::YahooBiz</a>.
@@ -1268,11 +1285,13 @@ http://www.svlug.org/sw/webfetch/
 =for text
 perl(1), WebFetch::CNNsearch, WebFetch::COLA, WebFetch::EGAuthors,
 WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
+WebFetch::PerlStruct,
 WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
 
 =for man
 perl(1), WebFetch::CNNsearch, WebFetch::COLA, WebFetch::EGAuthors,
 WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
+WebFetch::PerlStruct,
 WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
 
 =cut

@@ -13,6 +13,7 @@ use vars qw($VERSION @ISA @EXPORT @Options $Usage $listfile $outfile $title %tld
 
 use Exporter;
 use AutoLoader;
+use Carp;
 use WebFetch;
 use Locale::Country;
 
@@ -57,7 +58,7 @@ sub fetch
 
 	# get the list of addresses
 	if ( ! open LISTFILE, "$listfile" ) {
-		die "WebFetch::ListSubs: could not open $listfile: $!\n";
+		croak "WebFetch::ListSubs: could not open $listfile: $!\n";
 	}
 	my @content = (<LISTFILE>);  # gulp the file
 	close LISTFILE;

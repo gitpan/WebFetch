@@ -1,5 +1,14 @@
 Revision history for Perl extension WebFetch
 
+0.06 Tue May  4 17:00:01 PDT 1999
+      - updated WebFetch::EGAuthors for formatting changes all over their
+        site on May 1
+      - updated WebFetch::CNNsearch for formatting changes in their
+        search engine on May 4
+
+0.05  Sun Apr 11 00:00:00 PDT 1999
+      - added experimental WebFetch::PerlStruct
+
 0.04  Thu Apr  8 18:51:29 PDT 1999
       - modified WebFetch::Slashdot so it can get Segfault.org headlines
         and any other Slashdot-compatible site

@@ -13,6 +13,7 @@ use vars qw($VERSION @ISA @EXPORT @Options $Usage $listname $aliasfile );
 
 use Exporter;
 use AutoLoader;
+use Carp;
 use WebFetch;;
 
 @ISA = qw(Exporter AutoLoader WebFetch);
@@ -31,7 +32,7 @@ $Usage = "--list list-name [--aliases alias-file]";
 # configuration parameters
 $WebFetch::EGAuthors::filename = "eg-authors.html";
 $WebFetch::EGAuthors::num_links = 5;
-$WebFetch::EGAuthors::url = "http://www.egroups.com/list/";
+$WebFetch::EGAuthors::url = "http://www.egroups.com/group/";
 
 # the search portion of the URL needs to be saved to run after
 # command-line processing
@@ -60,7 +61,7 @@ sub fetch
 	my ( %aliases );
 	if ( defined $aliasfile ) {
 		if ( ! open ALIASFILE, $aliasfile ) {
-			die "WebFetch::EGAuthors: failed to open "
+			croak "WebFetch::EGAuthors: failed to open "
 				."$aliasfile: $!\n";
 		}
 		while ( <ALIASFILE> ) {
@@ -86,21 +87,39 @@ sub fetch
 	# process the input lines
 	my $content = $self->get;
 	my @lines = split ( '\n', $$content );
-	my ( %authors );
+	my ( %authors, $line, $state );
 	if ( $self->{debug}) {
 		print STDERR "debug: got ".($#lines+1)." lines from "
 			.length($content)." characters\n";
 	}
-	foreach ( @lines ) {
+	$state = 0;
+	for ( $line = 0; $line <= $#lines; $line++ ) {
 		my ( $name, $value );
-	 
-		if ( /^([0-9]+):\s*(.*)<br>$/ ) {
-			( $name, $value ) = ( $2, $1 );
-		} elsif ( /^(.*) <i>\(([0-9]+)\)<\/i><br>$/ ) {
-			( $name, $value ) = ( $1, $2 );
-		} else {
+
+		# skip to the table
+		if ( $state == 0 ) {
+			if ( $lines[$line] =~ /^<font .*posts/ ) {
+				$state = 1
+			}
 			next;
 		}
+
+	 	# detect end of table
+		if ( $lines[$line] =~ /<\/table>/ ) {
+			last;
+		}
+	 
+		# find each table row
+		if ( $lines[$line] !~ /^<tr>$/ ) {
+			next;
+		}
+
+		# decode the row
+		$name = $lines[$line+1];
+		$name =~ s/<[^>]*>//g;
+		$value = $lines[$line+3];
+		$value =~ s/<[^>]*>//g;
+		$line += 4;
 	 
 		if ( defined $aliases{$name}) {
 			$name = $aliases{$name};

@@ -13,6 +13,7 @@ sub/Freshmeat.pm
 sub/General.pm
 sub/LinuxToday.pm
 sub/ListSubs.pm
+sub/PerlStruct.pm
 sub/SiteNews.pm
 sub/Slashdot.pm
 sub/YahooBiz.pm

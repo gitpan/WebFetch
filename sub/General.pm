@@ -13,6 +13,7 @@ use vars qw($VERSION @ISA @EXPORT @Options $Usage $filename $url $format );
 
 use Exporter;
 use AutoLoader;
+use Carp;
 use WebFetch;;
 
 @ISA = qw(Exporter AutoLoader WebFetch);
@@ -52,7 +53,7 @@ sub fetch
 	my $first = shift @content;
 	if ( $first ne "[WebFetch export]" ) {
 		print STDERR "WebFetch::General: unexpected $first\n";
-		die "WebFetch::General: input file not exported by WebFetch\n";
+		croak "WebFetch::General: input file not exported by WebFetch\n";
 	}
 	my ( $i, $state, $current, $prev_attr, @parts );
 	$current = {};
