@@ -91,7 +91,7 @@ C<use WebFetch::LinuxDevNet;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::LinuxDevNet C<-e> "&fetch_main" -- --dir I<directory>>
+C<perl -w -MWebFetch::LinuxDevNet -e "&fetch_main" -- --dir directory>
 
 =head1 DESCRIPTION
 
@@ -106,7 +106,7 @@ C<Olinuxdevnet.html>.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

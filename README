@@ -133,6 +133,21 @@ WebFetch FUNCTIONS
             functions. Though it works with all the modules that
             come included with the WebFetch package itself.)
 
+    --xml_export *xml-export-file*
+            (optional) save a generic XML copy of the fetched info
+            into the file named by this parameter. (A module to read
+            this XML output will be included in a near-future
+            version of WebFetch.)
+
+For more info on XML see
+http://www.w3.org/XML/
+and
+http://www.perlxml.com/faq/perl-xml-faq.html
+
+            If you choose to generate and sustain XML content on
+            your site over the long term, you may want to have your
+            site listed on the XML Tree at http://www.xmltree.com/
+
     --ns_export *ns-export-file*
             (optional) save a MyNetscape export copy of the fetched
             info into the file named by this parameter. If this
@@ -146,12 +161,15 @@ WebFetch FUNCTIONS
             of the WebFetch::SiteNews news input file.
 
 For more info see http://my.netscape.com/publish/
+and http://www.w3.org/RDF/
 
-            *Note that MyNetscape uses Reuters Distribution Format
-            (RDF) for its imports. So this format may be readable by
-            any other sites who can read data from Reuters. You
-            should use the ".rdf" suffix on file names that use this
-            format.*
+            *Note that MyNetscape uses Resource Description
+            Framework (RDF), which is a form of XML, for its
+            imports. Though this command-line option uses some
+            specific RDF parameters for the MyNetscape portal, this
+            format should be readable by any other RDF-capable and
+            even some XML-capable sites. You should use the ".rdf"
+            suffix on file names that use this format.*
 
     --ns_site_title *site-title*
             (required if --ns_export is used) For exporting to
@@ -241,234 +259,496 @@ For more info see http://my.netscape.com/publish/
         of the additional parameters, as they should appear in the
         usage message.
 
+    $obj->do_actions
+        *`do_actions' was added in WebFetch 0.10 as part of the
+        WebFetch Embedding API.* Upon entry to this function, $obj
+        must contain the following attributes:
+
+    data    is a reference to a hash containing the following three
+            (required) keys:
+
+        fields  is a reference to an array containing the names of the
+                fetched data fields in the order they appear in the
+                records of the *data* array. This is necessary to
+                define what each field is called because any kind of
+                data can be fetched from the web.
+
+        wk_namesis a reference to a hash which maps from a key string
+                with a "well-known" (to WebFetch) field type to a
+                field name used in this table. The well-known names
+                are defined as follows:
+
+            title   a one-liner banner or title text (plain text, no
+                    HTML tags)
+
+            url     URL/link to the news (fully-qualified URL only, no
+                    HTML tags)
+
+            date    a date stamp, which must be program-readable by
+                    Perl's Date::Calc module in the Parse_Date()
+                    function in order to support timestamp-related
+                    comparisons and processing that some users have
+                    requested. If the date cannot be parsed by
+                    Date::Calc, either translate it when your module
+                    captures it, or do not define this "well-known"
+                    field because it wouldn't fit the definition.
+                    (plain text, no HTML tags)
+
+            summary a paragraph of summary text in HTML
+
+            commentsnumber of comments/replies at the news site (plain
+                    text, no HTML tags)
+
+            author  a name, handle or login name representing the author
+                    of the news item (plain text, no HTML tags)
+
+            categorya word or short phrase representing the category,
+                    topic or department of the news item (plain
+                    text, no HTML tags)
+
+            locationa location associated with the news item (plain
+                    text, no HTML tags)
+
+                The field names for this table are defined in the
+                *fields* array.
+
+                The hash only maps for the fields available in the
+                table. If no field representing a given well-known
+                name is present in the data fields, that well-known
+                name key must not be defined in this hash.
+
+        records an array containing the data records. Each record is
+                itself a reference to an array of strings which are
+                the data fields. This is effectively a two-
+                dimensional array or a table.
+
+                Only one table-type set of data is permitted per
+                fetch operation. If more are needed, they should be
+                arranged as separate fetches with different
+                parameters.
+
+    actions is a reference to a hash. The hash keys are names for
+            handler functions. The WebFetch core provides internal
+            handler functions called *fmt_handler_html* (for HTML
+            output), *fmt_handler_xml* (for XML output),
+            *fmt_handler_wf* (for WebFetch::General format),
+            *fmt_handler_rdf* (for MyNetscape RDF format). However,
+            WebFetch modules may provide additional format handler
+            functions of their own by prepending "fmt_handler_" to
+            the key string used in the *actions* array.
+
+            The values are array references containing *"action
+            specs"*, which are themselves arrays of parameters that
+            will be passed to the handler functions for generating
+            output in a specific format. There may be more than one
+            entry for a given format if multiple outputs with
+            different parameters are needed.
+
+            The presence of values in this field mean that output is
+            to be generated in the specified format. The presence of
+            these would have been chosed by the WebFetch module that
+            created them - possibly by default settings or by a
+            command-line argument that directed a specific output
+            format to be used.
+
+            For each valid action spec, a separate "savable"
+            (contents to be placed in a file) will be generated from
+            the contents of the *data* variable.
+
+            The valid (but all optional) keys are
+
+        html    the value must be a reference to an array which
+                specifies all the HTML generation (html_gen)
+                operations that will take place upon the data. Each
+                entry in the array is itself an array reference,
+                containing the following parameters for a call to
+                html_gen():
+
+            filenamea file name or path string (relative to the WebFetch
+                    output directory unless a full path is given)
+                    for output of HTML text.
+
+            params  a hash reference containing optional name/value
+                    parameters for the HTML format handler.
+
+                filter_f(optional) a reference to code that, given a
+                        reference to an entry in @{$self-
+                        >{data}{records}}, returns true (1) or false
+                        (0) for whether it will be included in the
+                        HTML output. By default, all records are
+                        included.
+
+                sort_fun(optional) a reference to code that, given
+                        references to two entries in @{$self-
+                        >{data}{records}}, returns the sort
+                        comparison value for the order they should
+                        be in. By default, no sorting is done and
+                        all records (subject to filtering) are
+                        accepted in order.
+
+                format_f(optional) a refernce to code that, given a
+                        reference to an entry in @{$self-
+                        >{data}{records}}, returns an HTML
+                        representation of the string. By default, a
+                        standard HTML formatting is generated using
+                        the well-known fields in the record. (This
+                        default generation fails if none of the
+                        title, url or text names are defined in
+                        %{$self->{data}{wk_names}}.
+
+        xml     the value must be a reference to an array which
+                specifies all the XML export (xml_export) operations
+                that will take place upon the data. Each entry in
+                the array is itself an array reference, containing
+                the following parameters for a call to xml_export():
+
+            filenamea file name or path string (relative to the WebFetch
+                    output directory unless a full path is given)
+                    for output of XML text.
+
+        wf      the value must be a reference to an array which
+                specifies all the WebFetch export (wf_export)
+                operations that will take place upon the data. Each
+                entry in the array is itself an array reference,
+                containing the following parameters for a call to
+                wf_export():
+
+            filenamea file name or path string (relative to the WebFetch
+                    output directory unless a full path is given)
+                    for output of the WebFetch::General export
+                    format.
+
+        rdf     the value must be a reference to an array which
+                specifies all the Resource Description Framework
+                (RDF) export (ns_export, used by MyNetscape)
+                operations that will take place upon the data. Each
+                entry in the array is itself an array reference,
+                containing the following parameters for a call to
+                ns_export():
+
+            filenamea file name or path string (relative to the WebFetch
+                    output directory unless a full path is given)
+                    for output of RDF format, for the MyNetscape
+                    portal or other sites that can use RDF.
+
+            site_titFor exporting to MyNetscape, this sets the name of
+                    your site. It cannot be more than 40 characters
+
+            site_linFor exporting to MyNetscape, this is the full URL
+                    MyNetscape will use to link to your site. It
+                    cannot be more than 500 characters.
+
+            site_desFor exporting to MyNetscape, this is a short
+                    description of your site. It cannot be more than
+                    500 characters.
+
+            image_ti(optional) For exporting to MyNetscape, this is the
+                    title (alt) text for the icon image.
+
+            image_ur(optional) For exporting to MyNetscape, this is the
+                    URL MyNetscpae will use for your icon image. If
+                    this is present, the link on the image will be
+                    the same as your $site_link parameter.
+
+            Additional valid keys may be created by modules that
+            inherit from WebFetch by supplying a method/function
+            named with "fmt_handler_" preceding the string used for
+            the key. For example, for an "xyz" format, the handler
+            function would be *fmt_handler_xyz*. The value (the
+            "action spec") of the hash entry must be an array
+            reference. Within that array are "action spec entries",
+            each of which is a reference to an array containing the
+            list of parameters that will be passed verbatim to the
+            *fmt_handler_xyz* function.
+
+            When the format handler function returns, it is expected
+            to have created entries in the $obj->{savables} array
+            (even if they only contain error messages explaining a
+            failure), which will be used by $obj->save() to save the
+            files and print the error messages.
+
+            For coding examples, use the *fmt_handler_** functions
+            in WebFetch.pm itself.
+
     $obj->fetch
-        This function must be provided by each derived module to
-        perform the fetch operaton specific to that module. It will
-        be called from `new()' so you should not call it directly.
-        Your fetch function should extract some data from somewhere
-        and place of it in HTML or other meaningful form in the
-        "savable" array.
+    This function must be provided by each derived module to perform
+    the fetch operaton specific to that module. It will be called
+    from `new()' so you should not call it directly. Your fetch
+    function should extract some data from somewhere and place of it
+    in HTML or other meaningful form in the "savable" array.
 
-        Upon entry to this function, $obj must contain the following
-        attributes:
+    Upon entry to this function, $obj must contain the following
+    attributes:
 
-    dir     The name of the directory to save in. (If called from the
-            command-line, this will already have been provided by
-            the required `--dir' parameter.)
+    dir The name of the directory to save in. (If called from the
+        command-line, this will already have been provided by the
+        required `--dir' parameter.)
 
-    savable a reference to an array where the "savable" items will be
-            placed by the $obj->fetch function. (You only need to
-            provide an array reference - other WebFetch functions
-            can write to it.) Each entry of the savable array is a
-            hash reference with the following attributes:
+    savable
+        a reference to an array where the "savable" items will be
+        placed by the $obj->fetch function. (You only need to
+        provide an array reference - other WebFetch functions can
+        write to it.)
 
-        file    file name to save in
+        In WebFetch 0.10 and later, this parameter should no longer
+        be supplied by the *fetch* function (unless you wish to use
+        0.09 backward compatibility) because it is filled in by the
+        *do_actions* after the *fetch* function is completed based
+        on the *data* and *actions* variables that are set in the
+        *fetch* function. (See below.)
 
-        content scalar w/ entire text or raw content to write to the
-                file
+        Each entry of the savable array is a hash reference with the
+        following attributes:
 
-        group   (optional) group setting to apply to file
+    file    file name to save in
 
-        mode    (optional) file permissions to apply to file
+    content scalar w/ entire text or raw content to write to the file
 
-            Contents of savable items may be generated directly by
-            derived modules or with WebFetch's `html_gen',
-            `html_savable' or `raw_savable' functions. These
-            functions will set the group and mode parameters from
-            the object's own settings, which in turn could have
-            originated from the WebFetch command-line if this was
-            called that way.
+    group   (optional) group setting to apply to file
 
-        Upon exit from this function, the $obj->savable array must
-        contain one entry for each file to be saved. More than one
-        array entry means more than one file to save. The WebFetch
-        infrastructure will save them, retaining backup copies and
-        setting file modes as needed.
+    mode    (optional) file permissions to apply to file
+
+        Contents of savable items may be generated directly by
+        derived modules or with WebFetch's `html_gen',
+        `html_savable' or `raw_savable' functions. These functions
+        will set the group and mode parameters from the object's own
+        settings, which in turn could have originated from the
+        WebFetch command-line if this was called that way.
+
+    Note that the fetch functions requirements changed in WebFetch
+    0.10. The old requirement (0.09 and earlier) is supported for
+    backward compatibility.
+
+    *In WebFetch 0.09 and earlier*, upon exit from this function,
+    the $obj->savable array must contain one entry for each file to
+    be saved. More than one array entry means more than one file to
+    save. The WebFetch infrastructure will save them, retaining
+    backup copies and setting file modes as needed.
+
+    *Beginning in WebFetch 0.10*, the "WebFetch embedding"
+    capability was introduced. In order to do this, the captured
+    data of the *fetch* function had to be externalized where other
+    Perl routines could access it. So the fetch function now only
+    populates data structures (including code references necessary
+    to process the data.)
+
+    Upon exit from the function, the following variables must be set
+    in `$obj':
+
+    data
+        is a reference to a hash which will be used by the
+        *do_actions* function. (See above.)
+
+    actions
+        is a reference to a hash which will be used by the
+        *do_actions* function. (See above.)
 
     $obj->get
-        This WebFetch utility function will get a URL and return a
-        reference to a scalar with the retrieved contents. Upon
-        entry to this function, `$obj' must contain the following
-        attributes:
+    This WebFetch utility function will get a URL and return a
+    reference to a scalar with the retrieved contents. Upon entry to
+    this function, `$obj' must contain the following attributes:
 
-    url     the URL to get
+    url the URL to get
 
-    quiet   a flag which, when set to a non-zero (true) value,
-            suppresses printing of HTTP request errors on STDERR
+    quiet
+        a flag which, when set to a non-zero (true) value,
+        suppresses printing of HTTP request errors on STDERR
 
     $obj->wf_export ( $filename, $fields, $links, [ $comment, [ $param ]] )
-        This WebFetch utility function generates contents for a
-        WebFetch export file, which can be placed on a web server to
-        be read by other WebFetch sites. The WebFetch::General
-        module reads this format. $obj->wf_export has the following
-        parameters:
+    *In WebFetch 0.10 and later, this should be used only in format
+    handler functions. See do_handlers() for details.*
+
+    This WebFetch utility function generates contents for a WebFetch
+    export file, which can be placed on a web server to be read by
+    other WebFetch sites. The WebFetch::General module reads this
+    format. $obj->wf_export has the following parameters:
 
     $filename
-            the file to save the WebFetch export contents to; this
-            will be placed in the savable record with the contents
-            so the save function knows were to write them
+        the file to save the WebFetch export contents to; this will
+        be placed in the savable record with the contents so the
+        save function knows were to write them
 
-    $fields a reference to an array containing a list of the names of
-            the data fields (in each entry of the @$lines array)
+    $fields
+        a reference to an array containing a list of the names of
+        the data fields (in each entry of the @$lines array)
 
-    $lines  a reference to an array of arrays; the outer array contains
-            each line of the exported data; the inner array is a
-            list of the fields within that line corresponding in
-            index number to the field names in the @$fields array
+    $lines
+        a reference to an array of arrays; the outer array contains
+        each line of the exported data; the inner array is a list of
+        the fields within that line corresponding in index number to
+        the field names in the @$fields array
 
     $comment
-            (optional) a Human-readable string comment (probably
-            describing the purpose of the format and the definitions
-            of the fields used) to be placed at the top of the
-            exported file
+        (optional) a Human-readable string comment (probably
+        describing the purpose of the format and the definitions of
+        the fields used) to be placed at the top of the exported
+        file
 
-    $param  (optional) a reference to a hash of global parameters for
-            the exported data. This is currently unused but reserved
-            for future versions of WebFetch.
+    $param
+        (optional) a reference to a hash of global parameters for
+        the exported data. This is currently unused but reserved for
+        future versions of WebFetch.
 
-    $obj->ns_export ( $filename, $lines )
-        This WebFetch utility function generates contents for a
-        MyNetscape export file, which can be placed on a web server
-        to be read by the MyNetscape site (my.netscape.com) if you
-        create a "channel" for your site at MyNetscape.
+    $obj->ns_export ( $filename, $lines, $site_title, $site_link, $site_desc, $image_title, $image_url)
+    *In WebFetch 0.10 and later, this should be used only in format
+    handler functions. See do_handlers() for details.*
 
-        Of the modules included with WebFetch, only
-        WebFetch::SiteNews and WebFetch::Genercal call $obj-
-        >ns_export(). The others will ignore it (because they're
-        just obtaining data from other sites themselves.) You may
-        use $obj->ns_export() in your own modules which inherit from
-        WebFetch.
+    This WebFetch utility function generates contents for a
+    MyNetscape export file, which can be placed on a web server to
+    be read by the MyNetscape site (my.netscape.com) if you create a
+    "channel" for your site at MyNetscape.
+
+    Of the modules included with WebFetch, only WebFetch::SiteNews
+    and WebFetch::Genercal call $obj->ns_export(). The others will
+    ignore it (because they're just obtaining data from other sites
+    themselves.) You may use $obj->ns_export() in your own modules
+    which inherit from WebFetch.
 
 For more info see http://my.netscape.com/publish/
 
-        $obj->ns_export has the following parameters:
+    $obj->ns_export has the following parameters:
 
     $filename
-            the file to save the WebFetch export contents to; this
-            will be placed in the savable record with the contents
-            so the save function knows were to write them
+        (required) the file to save the WebFetch export contents to;
+        this will be placed in the savable record with the contents
+        so the save function knows were to write them
 
-    $lines  a reference to an array of arrays; the outer array contains
-            each line of the exported data; the inner array is a
-            list of two fields within that line consisting of a text
-            title string in one entry and a URL in the second entry.
+    $lines
+        (required) a reference to an array of arrays; the outer
+        array contains each line of the exported data; the inner
+        array is a list of two fields within that line consisting of
+        a text title string in one entry and a URL in the second
+        entry.
 
     $site_title
-            For exporting to MyNetscape, this sets the name of your
-            site. It cannot be more than 40 characters
+        (required) For exporting to MyNetscape, this sets the name
+        of your site. It cannot be more than 40 characters
 
     $site_link
-            For exporting to MyNetscape, this is the full URL
-            MyNetscape will use to link to your site. It cannot be
-            more than 500 characters.
+        (required) For exporting to MyNetscape, this is the full URL
+        MyNetscape will use to link to your site. It cannot be more
+        than 500 characters.
 
     $site_desc
-            For exporting to MyNetscape, this is a short description
-            of your site. It cannot be more than 500 characters.
+        (required) For exporting to MyNetscape, this is a short
+        description of your site. It cannot be more than 500
+        characters.
 
     $image_title
-            (optional) For exporting to MyNetscape, this is the
-            title (alt) text for the icon image.
+        (optional) For exporting to MyNetscape, this is the title
+        (alt) text for the icon image.
 
     $image_url
-            (optional) For exporting to MyNetscape, this is the URL
-            MyNetscpae will use for your icon image. If this is
-            present, the link on the image will be the same as your
-            $site_link parameter.
+        (optional) For exporting to MyNetscape, this is the URL
+        MyNetscpae will use for your icon image. If this is present,
+        the link on the image will be the same as your $site_link
+        parameter.
 
     $obj->html_gen( $filename, $format_func, $links )
-        This WebFetch utility function generates some common formats
-        of HTML output used by WebFetch-derived modules. The HTML
-        output is stored in the $obj->{savable} array, for which all
-        the files in that array can later be saved by the $obj->save
-        function. It has the following parameters:
+    *In WebFetch 0.10 and later, this should be used only in format
+    handler functions. See do_handlers() for details.*
+
+    This WebFetch utility function generates some common formats of
+    HTML output used by WebFetch-derived modules. The HTML output is
+    stored in the $obj->{savable} array, for which all the files in
+    that array can later be saved by the $obj->save function. It has
+    the following parameters:
 
     $filename
-            the file name to save the generated contents to; this
-            will be placed in the savable record with the contents
-            so the save function knows were to write them
+        the file name to save the generated contents to; this will
+        be placed in the savable record with the contents so the
+        save function knows were to write them
 
     $format_func
-            a refernce to code that formats each entry in @$links
-            into a line of HTML
+        a refernce to code that formats each entry in @$links into a
+        line of HTML
 
-    $links  a reference to an array of arrays of parameters for
-            `&$format_func'; each entry in the outer array is
-            contents for a separate HTML line and a separate call to
-            `&$format_func'
+    $links
+        a reference to an array of arrays of parameters for
+        `&$format_func'; each entry in the outer array is contents
+        for a separate HTML line and a separate call to
+        `&$format_func'
 
-        Upon entry to this function, `$obj' must contain the
-        following attributes:
+    Upon entry to this function, `$obj' must contain the following
+    attributes:
 
     num_links
-            number of lines/links to display
+        number of lines/links to display
 
-    savable reference to an array of hashes which this function will use
-            as storage for filenames and contents to save (you only
-            need to provide an array reference - the function will
-            write to it)
+    savable
+        reference to an array of hashes which this function will use
+        as storage for filenames and contents to save (you only need
+        to provide an array reference - the function will write to
+        it)
 
-            See $obj->fetch for details on the contents of the
-            `savable' parameter
+        See $obj->fetch for details on the contents of the `savable'
+        parameter
 
     table_sections
-            (optional) if present, this specifies the number of
-            table columns to use; the number of links from
-            `num_links' will be divided evenly between the columns
+        (optional) if present, this specifies the number of table
+        columns to use; the number of links from `num_links' will be
+        divided evenly between the columns
 
-    style   (optional) a hash reference with style parameter
-            names/values that can modify the behavior of the
-            funciton to use different HTML styles. The recognized
-            values are enumerated with WebFetch's *--style* command
-            line option. (When they reach this point, they are no
-            longer a comma-delimited string - WebFetch or another
-            module has parsed them into a hash with the style name
-            as the key and the integer 1 for the value.)
+    style
+        (optional) a hash reference with style parameter
+        names/values that can modify the behavior of the funciton to
+        use different HTML styles. The recognized values are
+        enumerated with WebFetch's *--style* command line option.
+        (When they reach this point, they are no longer a comma-
+        delimited string - WebFetch or another module has parsed
+        them into a hash with the style name as the key and the
+        integer 1 for the value.)
 
     $obj->html_savable( $filename, $content )
-        This WebFetch utility function stores pre-generated HTML in
-        a new entry in the $obj->{savable} array, for later writing
-        to a file. It's basically a simple wrapper that puts HTML
-        comments warning that it's machine-generated around the
-        provided HTML text. This is generally a good idea so that
-        neophyte webmasters (and you know there are a lot of them in
-        the world :-) will see the warning before trying to manually
-        modify your automatically-generated text.
+    *In WebFetch 0.10 and later, this should be used only in format
+    handler functions. See do_handlers() for details.*
 
-        See $obj->fetch for details on the contents of the `savable'
-        parameter
+    This WebFetch utility function stores pre-generated HTML in a
+    new entry in the $obj->{savable} array, for later writing to a
+    file. It's basically a simple wrapper that puts HTML comments
+    warning that it's machine-generated around the provided HTML
+    text. This is generally a good idea so that neophyte webmasters
+    (and you know there are a lot of them in the world :-) will see
+    the warning before trying to manually modify your automatically-
+    generated text.
+
+    See $obj->fetch for details on the contents of the `savable'
+    parameter
 
     $obj->raw_savable( $filename, $content )
-        This WebFetch utility function stores any raw content and a
-        filename in the $obj->{savable} array, in preparation for
-        writing to that file. (The actual save operation may also
-        automatically include keeping backup files and setting the
-        group and mode of the file.)
+    *In WebFetch 0.10 and later, this should be used only in format
+    handler functions. See do_handlers() for details.*
 
-        See $obj->fetch for details on the contents of the `savable'
-        parameter
+    This WebFetch utility function stores any raw content and a
+    filename in the $obj->{savable} array, in preparation for
+    writing to that file. (The actual save operation may also
+    automatically include keeping backup files and setting the group
+    and mode of the file.)
+
+    See $obj->fetch for details on the contents of the `savable'
+    parameter
 
     $obj->save
-        This WebFetch utility function goes through all the entries
-        in the $obj->{savable} array and saves their contents,
-        providing several services such as keeping backup copies,
-        and setting the group and mode of the file, if requested to
-        do so.
+    This WebFetch utility function goes through all the entries in
+    the $obj->{savable} array and saves their contents, providing
+    several services such as keeping backup copies, and setting the
+    group and mode of the file, if requested to do so.
 
-        If you call a WebFetch-derived module from the command-line
-        run() or fetch_main() functions, this will already be done
-        for you. Otherwise you will need to call it after populating
-        the `savable' array with one entry per file to save.
+    If you call a WebFetch-derived module from the command-line
+    run() or fetch_main() functions, this will already be done for
+    you. Otherwise you will need to call it after populating the
+    `savable' array with one entry per file to save.
 
-        Upon entry to this function, `$obj' must contain the
-        following attributes:
+    Upon entry to this function, `$obj' must contain the following
+    attributes:
 
-    dir     directory to save files in
+    dir directory to save files in
 
-    savable names and contents for files to save
+    savable
+        names and contents for files to save
 
-        See $obj->fetch for details on the contents of the `savable'
-        parameter
+    See $obj->fetch for details on the contents of the `savable'
+    parameter
 
   WRITING NEW WebFetch-DERIVED MODULES
 
@@ -497,6 +777,12 @@ For more info see http://my.netscape.com/publish/
         documentation for your command-line options and remove old
         documentation for any you removed.
 
+        When adding documentation, if the existing formatting isn't
+        enough for your changes, there's more information about
+        Perl's POD ("plain old documentation") embedded
+        documentation format at
+        http://www.cpan.org/doc/manual/html/pod/perlpod.html
+
     authors
         Add yourself as an author if you added any significant
         functionality. But if you used anyone else's code, retain
@@ -510,12 +796,12 @@ For more info see http://my.netscape.com/publish/
         to.
 
     Please consider contributing any useful changes back to the
-    WebFetch project at `webfetch-maint@svlug.org'.
+    WebFetch project at `maint@webfetch.org'.
 
 AUTHOR
     WebFetch was written by Ian Kluft for the Silicon Valley Linux
     User Group (SVLUG). Send patches, bug reports, suggestions and
-    questions to `webfetch-maint@svlug.org'.
+    questions to `maint@webfetch.org'.
 
     WebFetch is Open Source software distributed via the
     Comprehensive Perl Archive Network (CPAN), a worldwide network
@@ -523,11 +809,13 @@ AUTHOR
     terms and licensing as Perl itelf.
 
 A current copy of the source code and documentation may be found at
-http://www.svlug.org/sw/webfetch/
+http://www.webfetch.org/
 
 SEE ALSO
 perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
-WebFetch::DebianNews, WebFetch::Freshmeat, WebFetch::LinuxToday,
+WebFetch::DebianNews, WebFetch::Freshmeat,
+WebFetch::LinuxDevNet, WebFetch::LinuxTelephony, WebFetch::LinuxToday,
 WebFetch::ListSubs, WebFetch::PerlStruct,
-WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
+WebFetch::SiteNews, WebFetch::Slashdot,
+WebFetch::32BitsOnline, WebFetch::YahooBiz.
 

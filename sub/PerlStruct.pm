@@ -120,23 +120,23 @@ In perl scripts:
 C<use WebFetch::PerlStruct;>
 
 C<$obj = new WebFetch::PerlStruct (
-	"content" => I<content_struct>,
-	"dir" => I<output_dir>,
-	"file" => I<output_file>,
-	[ "format" => I<format_string>, ]
-	[ "export" => I<wf_export_filename>, ]
-	[ "ns_export" => I<ns_export_filename>, ]
-	[ "ns_export" => I<ns_export_filename>, ]
-	[ "ns_export" => I<ns_export_filename>, ]
-	[ "ns_site_title" => I<ns_export_site_title>, ]
-	[ "ns_site_link" => I<ns_export_site_link>, ]
-	[ "ns_site_desc" => I<ns_export_site_desc>, ]
-	[ "ns_image_title" => I<ns_export_image_title>, ]
-	[ "ns_image_url" => I<ns_export_image_url>, ]
-	[ "font_size" => I<font_size>, ]
-	[ "font_face" => I<font_face>, ]
-	[ "group" => I<file_group_id>, ]
-	[ "mode" => I<file_mode_perms>, ]
+	"content" => content_struct,
+	"dir" => output_dir,
+	"file" => output_file,
+	[ "format" => format_string, ]
+	[ "export" => wf_export_filename, ]
+	[ "ns_export" => ns_export_filename, ]
+	[ "ns_export" => ns_export_filename, ]
+	[ "ns_export" => ns_export_filename, ]
+	[ "ns_site_title" => ns_export_site_title, ]
+	[ "ns_site_link" => ns_export_site_link, ]
+	[ "ns_site_desc" => ns_export_site_desc, ]
+	[ "ns_image_title" => ns_export_image_title, ]
+	[ "ns_image_url" => ns_export_image_url, ]
+	[ "font_size" => font_size, ]
+	[ "font_face" => font_face, ]
+	[ "group" => file_group_id, ]
+	[ "mode" => file_mode_perms, ]
 	[ "quiet" => 1 ]);>
 
 I<Note: WebFetch::PerlStruct is a Perl interface only.
@@ -220,7 +220,7 @@ fields in the $content_struct parameter.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

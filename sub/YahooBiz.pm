@@ -111,9 +111,9 @@ C<use WebFetch::YahooBiz;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::YahooBiz C<-e> "&fetch_main" -- --dir I<directory>
-     --search I<search-string> --days I<search-days>
-     --pagesize I<search-page-size>>
+C<perl -w -MWebFetch::YahooBiz -e "&fetch_main" -- --dir directory
+     --search search-string --days search-days
+     --pagesize search-page-size>
 
 =head1 DESCRIPTION
 
@@ -128,7 +128,7 @@ C<Oyahoo_biz.html>.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

@@ -97,7 +97,7 @@ C<use WebFetch::DebianNews>
 
 >From the command line:
 
-C<perl C<-w> -MWebFetch::DebianNews C<-e> "&fetch_main" -- --dir I<directory>>
+C<perl -w -MWebFetch::DebianNews -e "&fetch_main" -- --dir directory>
 
 =head1 DESCRIPTION
 
@@ -115,7 +115,7 @@ The WebFetch::DebianNews module was written by Chuck Ritter.
 Send patches or maintenance requests for this module to
 C<critter@roadport.com>.
 Send general patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

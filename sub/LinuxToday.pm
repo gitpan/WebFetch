@@ -9,13 +9,15 @@
 package WebFetch::LinuxToday;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @Options $Usage );
+use vars qw($VERSION @ISA @EXPORT @Options $Usage
+	@parts $story $parser @tag_stack
+);
 
 use Exporter;
-use AutoLoader;
-use WebFetch;;
+use XML::Parser;
+use WebFetch;
 
-@ISA = qw(Exporter AutoLoader WebFetch);
+@ISA = qw(Exporter WebFetch);
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
@@ -26,14 +28,18 @@ use WebFetch;;
 # configuration parameters
 $WebFetch::LinuxToday::filename = "linuxtoday.html";
 $WebFetch::LinuxToday::num_links = 5;
-$WebFetch::LinuxToday::url = "http://linuxtoday.com/lthead.txt";
+$WebFetch::LinuxToday::url = "http://linuxtoday.com/backend/linuxtoday.xml";
 
 # no user-servicable parts beyond this point
 
-# array indices
-sub entry_text { 0; }
-sub entry_link { 1; }
-sub entry_time { 2; }
+# XML
+$parser = XML::Parser->new(
+        Handlers => {
+                Start => \&xml_handle_start,
+                End   => \&xml_handle_end,
+                Char  => \&xml_handle_char
+        },
+);
 
 sub fetch_main { WebFetch::run(); }
 
@@ -42,37 +48,92 @@ sub fetch
 	my ( $self ) = @_;
 
 	# set parameters for WebFetch routines
-	$self->{url} = $WebFetch::LinuxToday::url;
-	$self->{num_links} = $WebFetch::LinuxToday::num_links;
+	if ( !defined $self->{url}) {
+		$self->{url} = $WebFetch::LinuxToday::url;
+	}
+	if ( !defined $self->{num_links}) {
+		$self->{num_links} = $WebFetch::LinuxToday::num_links;
+	}
+	if ( !defined $self->{filename}) {
+		$self->{filename} = $WebFetch::LinuxToday::filename;
+	}
+
+
+# "title", "url", "time", "author", "topic", "comments"
+
+        # set up Webfetch Embedding API data
+        $self->{data} = {}; 
+        $self->{actions} = {}; 
+        $self->{data}{fields} = [ "title", "url", "time", "author", "topic", "comments" ];
+        # defined which fields match to which "well-known field names"
+        $self->{data}{wk_names} = {
+                "title" => "title",
+                "url" => "url",
+                "date" => "time",
+                "comments" => "comments",
+                "author" => "author",
+                "category" => "topic",
+        };
+        $self->{data}{records} = [];
 
 	# process the links
 	my $content = $self->get;
-	my @parts = split ( /\&\&\r{0,1}\n/, $$content );
-	shift @parts;	# discard intro text
+	$parser->parse($$content);
 
-	# split up the response into each of its subjects
-	my ( $part, @content_links );
-	foreach $part ( @parts ) {
-		my @subparts = split ( /\n/, $part );
-		push ( @content_links, [ @subparts ]);
-
-	}
-        $self->html_gen( $WebFetch::LinuxToday::filename,
-                sub { return "<a href=\"".$_[&entry_link]."\">"
-                        .$_[&entry_text]."</a>"; },
-                \@content_links );
-
-        # export content if --export was specified
-        if ( defined $self->{export}) {
-                $self->wf_export( $self->{export},
-                        [ "title", "url", "time" ],
-                        \@content_links,
-                        "Exported from WebFetch::LinuxToday\n"
-                                ."\"title\" is article title\n"
-                                ."\"url\" is article URL\n"
-                                ."\"time\" is timestamp" );
+        # unravel the table of XML fields and make a WebFetch record table
+	my ( $part );
+        foreach $part ( @parts ) {
+                my ( $field, @fields );
+ 
+                # put the retrieved field names into the proper table slots
+                foreach $field ( @{$self->{data}{fields}}) {
+                        push @fields, ( defined $part->{$field})
+                                ? $part->{$field}
+                                : "";
+                }
+                push ( @{$self->{data}{records}}, [ @fields ]);
         }
+ 
+        # create the HTML actions list
+        $self->{actions}{html} = [];
+        my $params = {};
+        $params->{format_func} = sub {
+                # generate HTML text
+                my $url_fnum = $self->fname2fnum("url");
+                my $title_fnum = $self->fname2fnum("title");
+                my $com_fnum = $self->fname2fnum("comments");
+                return "<a href=\"".$_[$url_fnum]."\">"
+                        .$_[$title_fnum]."</a>"
+                        .( length($_[$com_fnum])
+                                ? " (".$_[$com_fnum].")" : "" );
+        };
+ 
+        # put parameters for fmt_handler_html() on the html list
+        push @{$self->{actions}{html}}, [ $self->{filename}, $params ];
+}
 
+sub xml_handle_start {
+        my ($p,$el) = @_;
+        push @tag_stack, $el;
+}
+ 
+sub xml_handle_end {
+        my ($p,$el) = @_;
+        my $leaving = pop @tag_stack;
+ 
+        if ( $leaving eq "story" ) {
+                push @parts, $story;
+                $story = {};
+        }
+}
+ 
+sub xml_handle_char {
+        my ($p,$data) = @_;
+        if ( $tag_stack[$#tag_stack-1] eq "story" 
+                and $tag_stack[$#tag_stack] ne "story" )
+        {
+                $story->{$tag_stack[$#tag_stack]} = $data;
+        }
 }
 
 1;
@@ -91,7 +152,7 @@ C<use WebFetch::LinuxToday;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::LinuxToday C<-e> "&fetch_main" -- --dir I<directory>>
+C<perl -w -MWebFetch::LinuxToday -e "&fetch_main" -- --dir directory>
 
 =head1 DESCRIPTION
 
@@ -106,7 +167,7 @@ C<Olinuxtoday.html>.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

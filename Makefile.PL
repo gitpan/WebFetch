@@ -13,5 +13,6 @@ WriteMakefile(
 	'Date::Calc' => 0,
 	'Data::Dumper' => 0,
 	'HTML::LinkExtor' => 0,
+	'XML::Parser' => 0,
 	},
 );

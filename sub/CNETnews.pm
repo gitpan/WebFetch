@@ -56,47 +56,76 @@ sub fetch {
   my ($self) = shift;
 
   # set parameters for WebFetch routines
-  if ( defined $search_string ) {
-	  $self->{url} = "http://www.news.com/Searching/Results/1,18,,00.html?newscomTopics=0&querystr=$search_string";
-  } elsif ( defined $alt_url ) {
-	  $self->{url} = $alt_url;
-  } else {
-	  $self->{url} = $WebFetch::CNETnews::url;
+  if ( !defined $self->{url}) {
+	  if ( defined $search_string ) {
+		  $self->{url} = "http://news.cnet.com/news/search/results/1,10199,,00.html?qt=$search_string";
+	  } elsif ( defined $alt_url ) {
+		  $self->{url} = $alt_url;
+	  } else {
+		  $self->{url} = $WebFetch::CNETnews::url;
+	  }
   }
-  $self->{filename} = (defined $alt_file) ?
-    $alt_file
-  : $WebFetch::CNETnews::filename;
-  $self->{num_links} = $WebFetch::CNETnews::num_links;
+  if ( ! defined $self->{filename}) {
+	  $self->{filename} = (defined $alt_file)
+	  ? $alt_file
+	  : $WebFetch::CNETnews::filename;
+  }
+  if ( ! defined $self->{num_links}) {
+	  $self->{num_links} = $WebFetch::CNETnews::num_links;
+  }
   my $hl_re = (defined $alt_hl_re)
-  	? $alt_hl_re : 'size=\"?\+1\"?><b>(.*?)</b></font>';
+  	? $alt_hl_re
+	: 'size=[\"\']?\+1[\"\']?><b><p>.*?</b></font>';
   my $search_re = (defined $alt_search_re)
-  	? $alt_search_re : '<font color=\"\#009933\">\&\#149\;<\/font>\&nbsp\; (<a href=.*<\/a>), [A-Za-z0-9, ]*<br>';
+  	? $alt_search_re
+	: '<font color=[\"]?\#009933[\"]?>\&\#149\;<\/font>.*?<br>';
+
+  # set up Webfetch Embedding API data
+  $self->{data} = {}; 
+  $self->{actions} = {}; 
+  $self->{data}{fields} = [ "title", "url" ];
+  # defined which fields match to which "well-known field names"
+  $self->{data}{wk_names} = {
+    "title" => "title",
+    "url" => "url",
+  };
+  $self->{data}{records} = [];
 
   # find the links
   my $content = $self->get;
   my $re = ( defined $search_string ) ? $search_re : $hl_re;
-  my ( @links, @lines, $line );
+  my ( @lines, $line, @links, $link );
   @lines = split ( /\n/, $$content );
   foreach $line ( @lines ) {
     my ( $match, $headline );
     ( $line =~ /$re/i ) or next;
+    @links = ( $line =~ /($re)/ig );
     my $p = new HTML::LinkExtor;
-    $p->parse($line);
-    if ( $line =~ /<a.*?>(.*?)<\/a>/i) { $headline = $1; }
-    foreach ($p->links()) {
-      next unless (shift(@$_) eq 'a');
-      my (%attr) = @$_;
-      my $url = URI->new_abs($attr{'href'}, $self->{url})->as_string();
-      push(@links, [ $url, $headline ]);
-      last;
+    foreach $link ( @links ) {
+      $p->parse($link);
+      if ( $link =~ /<a.*?>(.*?)<\/a>/i) { $headline = $1; }
+      foreach ($p->links()) {
+        next unless (shift(@$_) eq 'a');
+        my (%attr) = @$_;
+        my $url = URI->new_abs($attr{'href'}, $self->{url})->as_string();
+        push( @{$self->{data}{records}}, [ $headline, $url ]);
+        last;
+      }
     }
   }
 
-  # passback our links
-  $self->html_gen($self->{filename},
-  	sub { return "<a href=\"".$_[&entry_link]."\">"
-		.$_[&entry_text]."</a>";},
-	\@links);
+  # create the HTML actions list
+  $self->{actions}{html} = [];
+  my $params = {};
+  $params->{format_func} = sub {
+    # generate HTML text
+    my $url_fnum = $self->fname2fnum("url");
+    my $title_fnum = $self->fname2fnum("title");
+    return "<a href=\"".$_[$url_fnum]."\">".$_[$title_fnum]."</a>";
+  };
+
+  # put parameters for fmt_handler_html() on the html list
+  push @{$self->{actions}{html}}, [ $self->{filename}, $params ];
 }
 
 1;
@@ -115,7 +144,7 @@ C<use WebFetch::CNETnews;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::CNETnews C<-e> "&fetch_main" -- --dir I<directory> [--alt_url I<url>]  [--alt_file I<file>] [--search I<search_string>]>
+C<perl -w -MWebFetch::CNETnews -e "&fetch_main" -- --dir directory [--alt_url url]  [--alt_file file] [--search search_string]>
 
 =head1 DESCRIPTION
 
@@ -138,7 +167,7 @@ WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 The WebFetch::CNETnews module was contributed by Jamie Heilman.
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

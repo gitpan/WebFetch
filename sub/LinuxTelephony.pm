@@ -95,8 +95,7 @@ C<use WebFetch::LinuxTelephony;>
 
 >From the command line:
 
-C<perl C<-w> -MWebFetch::LinuxTelephony C<-e> "&fetch_main" -- --dir 
-I<directory>>
+C<perl -w -MWebFetch::LinuxTelephony -e "&fetch_main" -- --dir directory>
 
 =head1 DESCRIPTION
 
@@ -111,7 +110,7 @@ C<Olinuxtelephony.html>.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 WebFetch::LinuxTelephony is based on WebFetch::LinuxToday.
 Modifications made for WebFetch::LinuxTelephony by 

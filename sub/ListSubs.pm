@@ -159,8 +159,8 @@ C<use WebFetch::ListSubs;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::ListSubs C<-e> "&fetch_main" -- --dir I<directory>
-   --list I<mail-list-file> --out I<output-file> [--title I<table-title>]>
+C<perl -w -MWebFetch::ListSubs -e "&fetch_main" -- --dir directory
+   --list mail-list-file --out output-file [--title table-title]>
 
 =head1 DESCRIPTION
 
@@ -183,7 +183,7 @@ HTML table produced by this fetch operation.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

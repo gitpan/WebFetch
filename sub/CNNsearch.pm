@@ -51,10 +51,6 @@ $WebFetch::CNNsearch::search = sub {
 
 # no user-servicable parts beyond this point
 
-# array indices
-sub entry_link { 0; }
-sub entry_text { 1; }
-
 sub fetch_main { WebFetch::run(); }
 
 sub fetch
@@ -62,40 +58,57 @@ sub fetch
 	my ( $self ) = @_;
 
 	# set parameters for WebFetch routines
-	$self->{url} = $WebFetch::CNNsearch::url
-		."?".&$WebFetch::CNNsearch::search();
-	$self->{num_links} = $WebFetch::CNNsearch::num_links;
-	$self->{table_sections} = $WebFetch::CNNsearch::table_sections;
+	if ( ! defined $self->{url}) {
+		$self->{url} = $WebFetch::CNNsearch::url
+			."?".&$WebFetch::CNNsearch::search();
+	}
+	if ( ! defined $self->{num_links}) {
+		$self->{num_links} = $WebFetch::CNNsearch::num_links;
+	}
+	if ( ! defined $self->{filename}) {
+		$self->{filename} = $WebFetch::CNNsearch::filename;
+	}
+
+        # set up Webfetch Embedding API data
+        $self->{data} = {}; 
+        $self->{actions} = {}; 
+        $self->{data}{fields} = [ "title", "url" ];
+        # defined which fields match to which "well-known field names"
+        $self->{data}{wk_names} = {
+                "title" => "title",
+                "url" => "url",
+        };
+        $self->{data}{records} = [];
 
 	# process the links
 	my $content = $self->get;
-	my ( @content_links, @lines, $state );
+	my ( @lines, $state );
 	@lines = split ( /\n/, $$content );
 	$state = 0;
 	foreach ( @lines ) {
-		if ( $state == 0 and /<td width=\"95\%\">/ ) {
+		if ( $state == 0 and /<td width=\"95\%\">/i ) {
 			$state = 1;
 			next;
-		} elsif ( $state == 1 and /^<b><a href=\"([^"]+)\">(.*)<\/a><\/b>/i ) {
-			push ( @content_links, [ $1, $2 ]);
+		} elsif ( $state == 1 and /^<b><a href=\"(.*?)\">(.*?)<\/a><\/b>/i ) {
+			push ( @{$self->{data}{records}}, [ $2, $1 ]);
 		} elsif ( $state == 1 and ( /<table width=\"100\%\">/i )) {
 			last;
 		}
 	}
-	$self->html_gen( $WebFetch::CNNsearch::filename,
-		sub { return "<a href=\"".$_[&entry_link]."\">"
-			.$_[&entry_text]."</a>"; },
-		\@content_links );
 
-        # export content if --export was specified
-        if ( defined $self->{export}) {
-                $self->wf_export( $self->{export},
-                        [ "url", "title" ],
-                        \@content_links,
-                        "Exported from WebFetch::CNNsearch\n"
-                                ."\"url\" is article URL\n"
-                                ."\"title\" is article title" );
-        }
+        # create the HTML actions list
+        $self->{actions}{html} = [];
+        my $params = {};
+        $params->{format_func} = sub {
+                # generate HTML text
+                my $url_fnum = $self->fname2fnum("url");
+                my $title_fnum = $self->fname2fnum("title");
+                return "<a href=\"".$_[$url_fnum]."\">"
+                        .$_[$title_fnum]."</a>";
+        };
+ 
+        # put parameters for fmt_handler_html() on the html list
+        push @{$self->{actions}{html}}, [ $self->{filename}, $params ];
 }
 
 1;
@@ -114,9 +127,9 @@ C<use WebFetch::CNNsearch;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::CNNsearch C<-e> "&fetch_main" -- --dir I<directory>
-     --search I<search-string> [--pagesize I<search-page-size>>]
-     [--use_keyword]
+C<perl -w -MWebFetch::CNNsearch -e "&fetch_main" -- --dir directory
+     --search search-string [--pagesize search-page-size]
+     [--use_keyword]>
 
 =head1 DESCRIPTION
 
@@ -146,7 +159,7 @@ C<Ocnnsearch.html>.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

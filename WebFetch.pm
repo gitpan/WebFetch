@@ -10,8 +10,17 @@
 #
 # Revisions listed below are only for this file, not the WebFetch package.
 #
-# $Revision: 1.24 $
+# $Revision: 1.27 $
 # $Log: WebFetch.pm,v $
+# Revision 1.27  1999/09/09 08:08:30  ikluft
+# fix problem in WebFetch export after API upgrade
+#
+# Revision 1.26  1999/09/07 09:31:40  ikluft
+# Added WebFetch Embedding API
+#
+# Revision 1.25  1999/08/16 02:21:44  ikluft
+# updated to use new webfetch.org addresses/URLs
+#
 # Revision 1.24  1999/08/15 11:03:56  ikluft
 # added modules for 0.09
 #
@@ -26,7 +35,7 @@
 #
 # Revision 1.21  1999/05/05 00:17:28  ikluft
 # we have been informed that the RDF format used by MyNetscape is actually
-# Reuters Distribution Format.  This is now documented.
+# Resource Description Framework.  This is now documented.
 #
 # Revision 1.20  1999/05/05 00:09:30  ikluft
 # bump version to 0.06, add references to WebFetch::PerlStruct
@@ -155,7 +164,7 @@ reference to a module that is derived from (inherits from) WebFetch.
 =cut
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT);
+use vars qw($VERSION @ISA @EXPORT );
 
 use Exporter;
 use AutoLoader;
@@ -170,10 +179,8 @@ use Data::Dumper;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw( );
-$VERSION = '0.09';
+$VERSION = '0.10';
 my $debug;
-
-# Preloaded methods go here.
 
 =item Do not use the new() function directly from WebFetch.
 
@@ -189,8 +196,15 @@ sub new
 	my $class = shift;
 	my $self = {};
 	bless $self, $class;
+
+	# initialize the object parameters
 	$self->init(@_);
+
+	# go fetch the data
+	# this function must be provided by a derived module
 	$self->fetch();
+
+	# the object has been created
 	return $self;
 }
 
@@ -247,6 +261,36 @@ simply by omiting the export step from their fetch() functions.
 Though it works with all the modules that come included with the
 WebFetch package itself.)
 
+=item --xml_export I<xml-export-file>
+
+(optional) save a generic XML copy of the fetched info
+into the file named by this parameter.
+(A module to read this XML output will be included in a near-future
+version of WebFetch.)
+
+=for html
+For more info on XML see
+<a href="http://www.w3.org/XML/">http://www.w3.org/XML/</a>
+or
+<a href="http://www.perlxml.com/faq/perl-xml-faq.html">http://www.perlxml.com/faq/perl-xml-faq.html</a>
+
+=for text
+For more info on XML see
+http://www.w3.org/XML/
+and
+http://www.perlxml.com/faq/perl-xml-faq.html
+
+=for man
+For more info on XML see
+http://www.w3.org/XML/
+and
+http://www.perlxml.com/faq/perl-xml-faq.html
+
+If you choose to generate and sustain XML content on your site
+over the long term,
+you may want to have your site listed on the XML Tree
+at http://www.xmltree.com/
+
 =item --ns_export I<ns-export-file>
 
 (optional) save a MyNetscape export copy of the fetched info
@@ -261,18 +305,26 @@ the --url_prefix parameter or in the I<url-prefix> line of the
 WebFetch::SiteNews news input file.
 
 =for html
-For more info see <a href="http://my.netscape.com/publish/">http://my.netscape.com/publish/</a>
+For more info see
+<a href="http://my.netscape.com/publish/">http://my.netscape.com/publish/</a>
+and 
+<a href="http://www.w3.org/RDF/">http://www.w3.org/RDF/</a>
 
 =for text
 For more info see http://my.netscape.com/publish/
+and http://www.w3.org/RDF/
 
 =for man
 For more info see http://my.netscape.com/publish/
+and http://www.w3.org/RDF/
 
-I<Note that MyNetscape uses Reuters Distribution Format (RDF) for its
-imports.  So this format may be readable by any other sites who can
-read data from Reuters.  You should use the ".rdf" suffix on file names
-that use this format.>
+I<Note that MyNetscape uses Resource Description Framework (RDF),
+which is a form of XML, for its imports.
+Though this command-line option uses some specific RDF parameters
+for the MyNetscape portal,
+this format should be readable by any other RDF-capable
+and even some XML-capable sites.
+You should use the ".rdf" suffix on file names that use this format.>
 
 =item --ns_site_title I<site-title>
 
@@ -391,7 +443,8 @@ parameters, as they should appear in the usage message.
 sub run
 {
 	my ( $caller_pkg, $caller_file, $caller_line ) = caller;
-	my ( $obj, $dir, $group, $mode, $export, $ns_export, $quiet,
+	my ( $obj, $dir, $group, $mode, $export, $xml_export,
+		$ns_export, $quiet,
 		$url_prefix, $ns_site_title, $ns_site_link, $ns_site_desc,
 		$ns_image_title, $ns_image_url, $font_size, $font_face,
 		$style, %style_hash );
@@ -402,6 +455,7 @@ sub run
 		"group:s" => \$group,
 		"mode:s" => \$mode, 
 		"export:s" => \$export,
+		"xml_export:s" => \$xml_export,
 		"ns_export:s" => \$ns_export,
 		"ns_site_title:s" => \$ns_site_title,
 		"ns_site_link:s" => \$ns_site_link,
@@ -420,11 +474,11 @@ sub run
 	if ( ! $result ) {
 		print STDERR "usage: $0 --dir dirpath "
 			."[--group group] [--mode mode] [--export file]\n";
-		print STDERR "   [--ns_export file] [--ns_site_title title] "
-			."[--ns_site_link url] [--ns_site_desc text]\n";
-		print STDERR "   [--ns_image_title title] "
-			."[--ns_image_url url] [--url_prefix prefix]\n";
-		print STDERR "[--quiet]\n";
+		print STDERR "   [--xml_export file] [--ns_export file] "
+			."[--ns_site_title title] [--ns_site_link url]\n";
+		print STDERR "   [--ns_site_desc text] "
+			."[--ns_image_title title] [--ns_image_url url]\n";
+		print STDERR "[--url_prefix prefix] [--quiet]\n";
 		if ( eval "defined \$".$caller_pkg."::Usage" ) {
 			print STDERR "   "
 				.( eval "\$".$caller_pkg."::Usage" )."\n";
@@ -437,12 +491,27 @@ sub run
 			$style_hash{$_} = 1;
 		}
 	}
+
+	# Note: by the old (0.09 and earlier) WebFetch API, the fetch
+	# routine creates all the savables, which $obj->save() will write
+	# to disk with backups of old copies.  In 0.10 and later, in order
+	# to add WebFetch-embedding capability, the fetch routine saves
+	# its raw data without any HTML/XML/etc formatting in @{$obj->{data}}
+	# and data-to-savable conversion routines in %{$obj->{actions}},
+	# which contains several structures with key names matching software
+	# processing features.  The purpose of this is to externalize the
+	# captured data so other software can use it too.
+
+	# create the new object
+	# this also calls the $obj->fetch() routine for the module which
+	# has inherited from WebFetch to do this
 	$obj = eval 'new '.$caller_pkg.' (
 		"dir" => $dir,
 		(defined $group) ? ( "group" => $group ) : (),
 		(defined $mode) ? ( "mode" => $mode ) : (),
 		(defined $debug) ? ( "debug" => $debug ) : (),
 		(defined $export) ? ( "export" => $export ) : (),
+		(defined $xml_export) ? ( "xml_export" => $xml_export ) : (),
 		(defined $ns_export) ? ( "ns_export" => $ns_export ) : (),
 		(defined $ns_site_title) ? ( "ns_site_title" => $ns_site_title ) : (),
 		(defined $ns_site_link) ? ( "ns_site_link" => $ns_site_link ) : (),
@@ -459,6 +528,45 @@ sub run
 		print STDERR "WebFetch: error: $@\n";
 		exit 1;
 	}
+
+	# if the object had the data for the WebFetch-embedding API,
+	# then data processing is external to the fetch routine
+	# (This externalizes the data for other software to capture it.)
+	if (( defined $obj->{data}) and ( defined $obj->{actions})) {
+
+		# Add formats requested by the command line or parent program.
+		# In WebFetch 0.09 and earlier, this had to be done in each
+		# module.  WebFetch 0.10 externalizes the captured data so
+		# that multiple schema-based export formats can be handled
+		# here.
+		if ( defined $obj->{export}) {
+			( defined $obj->{actions}) or $obj->{actions} = {};
+			( defined $obj->{actions}{wf})
+				or $obj->{actions}{wf} = [];
+			push @{$obj->{actions}{wf}}, [ $obj->{export} ];
+		}
+		if ( defined $obj->{xml_export}) {
+			( defined $obj->{actions}) or $obj->{actions} = {};
+			( defined $obj->{actions}{xml})
+				or $obj->{actions}{xml} = [];
+			push @{$obj->{actions}{xml}}, [ $obj->{xml_export} ];
+		}
+		if ( defined $obj->{ns_export}) {
+			( defined $obj->{actions}) or $obj->{actions} = {};
+			( defined $obj->{actions}{rdf})
+				or $obj->{actions}{rdf} = [];
+			push @{$obj->{actions}{rdf}}, [ $obj->{ns_export} ];
+		}
+
+		# NOTE: HTML exports are still the responsibility of the
+		# WebFetch-derived modules.  Display tastes vary too much
+		# to generalize at this level (yet).  This only handles
+		# formats with built-in schema definitions.
+
+		# perform requested actions on the data
+		$obj->do_actions();
+	}
+
 	$result = $obj->save();
 	if ( ! $result ) {
 		my $savable;
@@ -473,6 +581,355 @@ sub run
 		}
 	}
 	return $result ? 0 : 1;
+}
+
+=item $obj->do_actions
+
+I<C<do_actions> was added in WebFetch 0.10 as part of the
+WebFetch Embedding API.>
+Upon entry to this function, $obj must contain the following attributes:
+
+=over 4
+
+=item data
+
+is a reference to a hash containing the following three (required)
+keys:
+
+=over 4
+
+=item fields
+
+is a reference to an array containing the names of the fetched data fields
+in the order they appear in the records of the I<data> array.
+This is necessary to define what each field is called
+because any kind of data can be fetched from the web.
+
+=item wk_names
+
+is a reference to a hash which maps from
+a key string with a "well-known" (to WebFetch) field type
+to a field name used in this table.
+The well-known names are defined as follows:
+
+=over 4
+
+=item title
+
+a one-liner banner or title text
+(plain text, no HTML tags)
+
+=item url
+
+URL/link to the news
+(fully-qualified URL only, no HTML tags)
+
+=item date
+
+a date stamp,
+which must be program-readable
+by Perl's Date::Calc module in the Parse_Date() function
+in order to support timestamp-related comparisons
+and processing that some users have requested.
+If the date cannot be parsed by Date::Calc,
+either translate it when your module captures it,
+or do not define this "well-known" field
+because it wouldn't fit the definition.
+(plain text, no HTML tags)
+
+=item summary
+
+a paragraph of summary text in HTML
+
+=item comments
+
+number of comments/replies at the news site
+(plain text, no HTML tags)
+
+=item author
+
+a name, handle or login name representing the author of the news item
+(plain text, no HTML tags)
+
+=item category
+
+a word or short phrase representing the category, topic or department
+of the news item
+(plain text, no HTML tags)
+
+=item location
+
+a location associated with the news item
+(plain text, no HTML tags)
+
+=back
+
+The field names for this table are defined in the I<fields> array.
+
+The hash only maps for the fields available in the table.
+If no field representing a given well-known name is present
+in the data fields,
+that well-known name key must not be defined in this hash.
+
+=item records
+
+an array containing the data records.
+Each record is itself a reference to an array of strings which are
+the data fields.
+This is effectively a two-dimensional array or a table.
+
+Only one table-type set of data is permitted per fetch operation.
+If more are needed, they should be arranged as separate fetches
+with different parameters.
+
+=back
+
+=item actions
+
+is a reference to a hash.
+The hash keys are names for handler functions.
+The WebFetch core provides internal handler functions called
+I<fmt_handler_html> (for HTML output), 
+I<fmt_handler_xml> (for XML output), 
+I<fmt_handler_wf> (for WebFetch::General format), 
+I<fmt_handler_rdf> (for MyNetscape RDF format). 
+However, WebFetch modules may provide additional
+format handler functions of their own by prepending
+"fmt_handler_" to the key string used in the I<actions> array.
+
+The values are array references containing
+I<"action specs">,
+which are themselves arrays of parameters
+that will be passed to the handler functions
+for generating output in a specific format.
+There may be more than one entry for a given format if multiple outputs
+with different parameters are needed.
+
+The presence of values in this field mean that output is to be
+generated in the specified format.
+The presence of these would have been chosed by the WebFetch module that
+created them - possibly by default settings or by a command-line argument
+that directed a specific output format to be used.
+
+For each valid action spec,
+a separate "savable" (contents to be placed in a file)
+will be generated from the contents of the I<data> variable.
+
+The valid (but all optional) keys are
+
+=over 4
+
+=item html
+
+the value must be a reference to an array which specifies all the
+HTML generation (html_gen) operations that will take place upon the data.
+Each entry in the array is itself an array reference,
+containing the following parameters for a call to html_gen():
+
+=over 4
+
+=item filename
+
+a file name or path string
+(relative to the WebFetch output directory unless a full path is given)
+for output of HTML text.
+
+=item params
+
+a hash reference containing optional name/value parameters for the
+HTML format handler.
+
+=over 4
+
+=item filter_func
+
+(optional)
+a reference to code that, given a reference to an entry in
+@{$self->{data}{records}},
+returns true (1) or false (0) for whether it will be included in the
+HTML output.
+By default, all records are included.
+
+=item sort_func
+
+(optional)
+a reference to code that, given references to two entries in
+@{$self->{data}{records}},
+returns the sort comparison value for the order they should be in.
+By default, no sorting is done and all records (subject to filtering)
+are accepted in order.
+
+=item format_func
+
+(optional)
+a refernce to code that, given a reference to an entry in
+@{$self->{data}{records}},
+returns an HTML representation of the string.
+By default, a standard HTML formatting is generated using the
+well-known fields in the record.
+(This default generation fails if none of the title, url or text
+names are defined in %{$self->{data}{wk_names}}.
+
+=back
+
+=back
+
+=item xml
+
+the value must be a reference to an array which specifies all the
+XML export (xml_export) operations that will take place upon the data.
+Each entry in the array is itself an array reference,
+containing the following parameters for a call to xml_export():
+
+=over 4
+
+=item filename
+
+a file name or path string
+(relative to the WebFetch output directory unless a full path is given)
+for output of XML text.
+
+=back
+
+=item wf
+
+the value must be a reference to an array which specifies all the
+WebFetch export (wf_export) operations that will take place upon the data.
+Each entry in the array is itself an array reference,
+containing the following parameters for a call to wf_export():
+
+=over 4
+
+=item filename
+
+a file name or path string
+(relative to the WebFetch output directory unless a full path is given)
+for output of the WebFetch::General export format.
+
+=back
+
+=item rdf
+
+the value must be a reference to an array which specifies all the
+Resource Description Framework (RDF) export (ns_export, used by MyNetscape)
+operations that will take place upon the data.
+Each entry in the array is itself an array reference,
+containing the following parameters for a call to ns_export():
+
+=over 4
+
+=item filename
+
+a file name or path string
+(relative to the WebFetch output directory unless a full path is given)
+for output of RDF format,
+for the MyNetscape portal or other sites that can use RDF.
+
+=item site_title
+
+For exporting to MyNetscape, this sets the name of your site.
+It cannot be more than 40 characters
+
+=item site_link
+
+For exporting to MyNetscape, this is the full URL MyNetscape will
+use to link to your site.
+It cannot be more than 500 characters.
+
+=item site_desc
+
+For exporting to MyNetscape, this is a short description of your site.
+It cannot be more than 500 characters.
+
+=item image_title
+
+(optional)
+For exporting to MyNetscape, this is the title (alt) text for the icon image.
+
+=item image_url
+
+(optional)
+For exporting to MyNetscape, this is the URL MyNetscpae will use
+for your icon image.
+If this is present, the link on the image will be the same as your
+$site_link parameter.
+
+=back
+
+=back
+
+Additional valid keys may be created by modules that inherit from WebFetch
+by supplying a method/function named with "fmt_handler_" preceding the
+string used for the key.
+For example, for an "xyz" format, the handler function would be
+I<fmt_handler_xyz>.
+The value (the "action spec") of the hash entry
+must be an array reference.
+Within that array are "action spec entries",
+each of which is a reference to an array containing the list of
+parameters that will be passed verbatim to the I<fmt_handler_xyz> function.
+
+When the format handler function returns, it is expected to have
+created entries in the $obj->{savables} array
+(even if they only contain error messages explaining a failure),
+which will be used by $obj->save() to save the files and print the
+error messages.
+
+For coding examples, use the I<fmt_handler_*> functions in WebFetch.pm itself.
+
+=back
+
+=back
+
+=cut
+
+sub do_actions
+{
+	my ( $self ) = @_;
+
+	# we *really* need the data and actions to be set!
+	# otherwise assume we're in WebFetch 0.09 compatibility mode and
+	# $self->fetch() better have created its own savables already
+	if (( !defined $self->{data}) or ( !defined $self->{actions})) {
+		return
+	}
+
+	# loop through all the actions
+	my $action_spec;
+	foreach $action_spec ( keys %{$self->{actions}} ) {
+
+		# check if there's a handler function for this action
+		my $action_handler = "fmt_handler_".$action_spec;
+		if ( $self->can($action_handler)) {
+
+			# loop through action spec entries (parameter lists)
+			my $entry;
+			foreach $entry ( @{$self->{actions}{$action_spec}}) {
+				# parameters must be in an ARRAY ref
+				if (ref $entry ne "ARRAY" ) {
+					carp "warning: entry in action spec "
+						."\"".$action_spec."\""
+						."expected to be ARRAY, found "
+						.(ref $entry)." instead "
+						."- ignored\n";
+					next;
+				}
+
+				# everything looks OK - call the handler
+				$self->$action_handler(@$entry);
+
+				# if there were errors, the handler should
+				# have created a savable entry which
+				# contains only the error entry so that
+				# it will be reported by $self->save()
+			}
+		} else {
+			carp "warning: action \"$action_spec\" specified but "
+				."\&{\$self->$action_handler}() "
+				."not defined in "
+				.(ref $self)." - ignored\n";
+		}
+	}
 }
 
 =item $obj->fetch
@@ -499,6 +956,16 @@ a reference to an array where the "savable" items will be placed by
 the $obj->fetch function.
 (You only need to provide an array reference -
 other WebFetch functions can write to it.)
+
+In WebFetch 0.10 and later,
+this parameter should no longer be supplied by the I<fetch> function
+(unless you wish to use 0.09 backward compatibility)
+because it is filled in by the I<do_actions>
+after the I<fetch> function is completed
+based on the I<data> and I<actions> variables
+that are set in the I<fetch> function.
+(See below.)
+
 Each entry of the savable array is a hash reference with the following
 attributes:
 
@@ -531,11 +998,38 @@ the WebFetch command-line if this was called that way.
 
 =back
 
-Upon exit from this function, the $obj->savable array must contain
+Note that the fetch functions requirements changed in WebFetch 0.10.
+The old requirement (0.09 and earlier) is supported for backward compatibility.
+
+I<In WebFetch 0.09 and earlier>,
+upon exit from this function, the $obj->savable array must contain
 one entry for each file to be saved.
 More than one array entry means more than one file to save.
 The WebFetch infrastructure will save them, retaining backup copies
 and setting file modes as needed.
+
+I<Beginning in WebFetch 0.10>, the "WebFetch embedding" capability was introduced.
+In order to do this, the captured data of the I<fetch> function 
+had to be externalized where other Perl routines could access it.  
+So the fetch function now only populates data structures
+(including code references necessary to process the data.)
+
+Upon exit from the function,
+the following variables must be set in C<$obj>:
+
+=over 4
+
+=item data
+
+is a reference to a hash which will be used by the I<do_actions> function.
+(See above.)
+
+=item actions
+
+is a reference to a hash which will be used by the I<do_actions> function.
+(See above.)
+
+=back
 
 =cut
 
@@ -576,13 +1070,13 @@ sub get
 	if ( $self->{debug}) {
 		print STDERR "debug: get(".$self->{url}.")\n";
 	}
- 
+
         # send request, capture response
         my $ua = LWP::UserAgent->new;
 	$ua->agent("WebFetch/$VERSION ".$ua->agent);
         my $request = HTTP::Request->new(GET => $self->{url});
         my $response = $ua->request($request);
- 
+
         # abort on failure
         if ($response->is_error) {
                 $self->{quiet} or print STDERR
@@ -590,13 +1084,16 @@ sub get
 			.$response->as_string."\n";
                 exit 1;
         }
- 
+
         # return the content
         my $content = $response->content;
 	return \$content;
 }
 
 =item $obj->wf_export ( $filename, $fields, $links, [ $comment, [ $param ]] )
+
+I<In WebFetch 0.10 and later, this should be used only in
+format handler functions.  See do_handlers() for details.>
 
 This WebFetch utility function generates contents for a WebFetch export
 file, which can be placed on a web server to be read by other WebFetch sites.
@@ -670,7 +1167,7 @@ sub wf_export
 	push @export_out, "# This was generated by the Perl5 WebFetch "
 		."$VERSION module.";
 	push @export_out, "# WebFetch info can be found at "
-		."http://www.svlug.org/sw/webfetch/";
+		."http://www.webfetch.org/";
 	if ( defined $comment ) {
 		my $c_line;
 		push @export_out, "#";
@@ -700,7 +1197,10 @@ sub wf_export
 }
 
 
-=item $obj->ns_export ( $filename, $lines )
+=item $obj->ns_export ( $filename, $lines, $site_title, $site_link, $site_desc, $image_title, $image_url)
+
+I<In WebFetch 0.10 and later, this should be used only in
+format handler functions.  See do_handlers() for details.>
 
 This WebFetch utility function generates contents for a MyNetscape export
 file, which can be placed on a web server to be read by the MyNetscape
@@ -728,12 +1228,14 @@ $obj->ns_export has the following parameters:
 
 =item $filename
 
+(required)
 the file to save the WebFetch export contents to;
 this will be placed in the savable record with the contents
 so the save function knows were to write them
 
 =item $lines
 
+(required)
 a reference to an array of arrays;
 the outer array contains each line of the exported data;
 the inner array is a list of two fields within that line
@@ -742,17 +1244,20 @@ URL in the second entry.
 
 =item $site_title
 
+(required)
 For exporting to MyNetscape, this sets the name of your site.
 It cannot be more than 40 characters
 
 =item $site_link
 
+(required)
 For exporting to MyNetscape, this is the full URL MyNetscape will
 use to link to your site.
 It cannot be more than 500 characters.
 
 =item $site_desc
 
+(required)
 For exporting to MyNetscape, this is a short description of your site.
 It cannot be more than 500 characters.
 
@@ -859,6 +1364,9 @@ sub ns_export
 
 =item $obj->html_gen( $filename, $format_func, $links )
 
+I<In WebFetch 0.10 and later, this should be used only in
+format handler functions.  See do_handlers() for details.>
+
 This WebFetch utility function generates some common formats of
 HTML output used by WebFetch-derived modules.
 The HTML output is stored in the $obj->{savable} array,
@@ -927,7 +1435,7 @@ name as the key and the integer 1 for the value.)
 sub html_gen
 {
         my ( $self, $filename, $format_func, $links ) = @_;
- 
+
         # generate summary HTML links
         my $link_count=0;
         my @result;
@@ -993,7 +1501,7 @@ sub html_gen
 		push @result, "</td></tr></table>";
 		push @result, "</center>";
 	}
- 
+
 	$self->html_savable( $filename, join("\n",@result)."\n");
 }
 
@@ -1024,6 +1532,9 @@ sub font_end
 
 =item $obj->html_savable( $filename, $content )
 
+I<In WebFetch 0.10 and later, this should be used only in
+format handler functions.  See do_handlers() for details.>
+
 This WebFetch utility function stores pre-generated HTML in a new entry in
 the $obj->{savable} array, for later writing to a file.
 It's basically a simple wrapper that puts HTML comments
@@ -1041,18 +1552,21 @@ See $obj->fetch for details on the contents of the C<savable> parameter
 sub html_savable
 {
         my ( $self, $filename, $content ) = @_;
- 
+
 	$self->raw_savable( $filename,
 		"<!--- begin text generated by "
 		."Perl5 WebFetch $VERSION - do not manually edit --->\n"
 		."<!--- WebFetch can be found at "
-		."http://www.svlug.org/sw/webfetch/ --->\n"
+		."http://www.webfetch.org/ --->\n"
 		.$content
 		."<!--- end text generated by "
 		."Perl5 WebFetch $VERSION - do not manually edit --->\n" );
 }
 
 =item $obj->raw_savable( $filename, $content )
+
+I<In WebFetch 0.10 and later, this should be used only in
+format handler functions.  See do_handlers() for details.>
 
 This WebFetch utility function stores any raw content and a filename
 in the $obj->{savable} array,
@@ -1068,7 +1582,7 @@ See $obj->fetch for details on the contents of the C<savable> parameter
 sub raw_savable
 {
         my ( $self, $filename, $content ) = @_;
- 
+
 	if ( !defined $self->{savable}) {
 		$self->{savable} = [];
 	}
@@ -1262,13 +1776,342 @@ sub save
 	return 1;
 }
 
-# Autoload methods go after =cut, and are processed by the autosplit program.
+#
+# functions to support format handlers
+#
+
+# initialize an internal hash of field names to field numbers
+sub init_fname2fnum
+{
+	my ( $self ) = @_;
+
+	# check if fname2fnum is already initialized
+	if (( defined $self->{fname2fnum})
+		and ref $self->{fname2fnum} eq "HASH" )
+	{
+		# already done - success
+		return 1;
+	}
+
+	# check if prerequisite data exists
+	if (( ! defined $self->{data} )
+		or ( ! defined $self->{data}{fields}))
+	{
+		# missing prerequisites - failed
+		return 0;
+	}
+
+	# initialize the fname2fnum hash
+	my $i;
+	$self->{fname2fnum} = {};
+	for ( $i=0; $i < scalar(@{$self->{data}{fields}}); $i++ ) {
+		# put the field number in as the value for the hash
+		$self->{fname2fnum}{$self->{data}{fields}[$i]} = $i;
+	}
+
+	# OK, done
+	return 1;
+}
+
+# initialize an internal hash of well-known names to field numbers
+sub init_wk2fnum
+{
+	my ( $self ) = @_;
+
+	$self->init_fname2fnum() or return 0;
+
+	# check if wk2fnum is already initialized
+	if (( defined $self->{wk2fnum})
+		and ref $self->{wk2fnum} eq "HASH" )
+	{
+		# already done - success
+		return 1;
+	}
+
+	# check for prerequisite data
+	if ( ! defined $self->{data}{wk_names}) {
+		return 0;
+	}
+
+	my $wk_key;
+	$self->{wk2fnum} = {};
+	foreach $wk_key ( keys %{$self->{data}{wk_names}}) {
+		# perform consistency cross-check between wk_names and fields
+		if ( !defined $self->{fname2fnum}{$self->{data}{wk_names}{$wk_key}})
+		{
+			# wk_names has a bad field name - carp about it!
+			carp "warning: wk_names contains $wk_key"."->"
+				.$self->{data}{wk_names}{$wk_key}
+				." but "
+				.$self->{data}{wk_names}{$wk_key}
+				." is not in the fields list - ignored\n";
+		} else {
+			# it's OK - put it in the table
+			$self->{wk2fnum}{$wk_key} =
+				$self->{fname2fnum}{$self->{data}{wk_names}{$wk_key}};
+		}
+	}
+	return 1;
+}
+
+# convert well-known name to field name
+sub wk2fname
+{
+	my ( $self, $wk ) = @_;
+
+	$self->init_fname2fnum() or return undef;
+
+	# check for prerequisite data
+	if (( ! defined $self->{data}{wk_names})
+		or ( ! defined $self->{data}{wk_names}{$wk}))
+	{
+		return undef;
+	}
+
+	# double check that the field exists before pronouncing it OK
+	# (perform consistency cross-check between wk_names and fields)
+	if ( defined $self->{fname2fnum}{$self->{data}{wk_names}{$wk}}) {
+		return $self->{data}{wk_names}{$wk};
+	}
+
+	# otherwise, wk_names has a bad field name.
+	# But init_wk2fnum() may have already carped about it
+	# so check whether we need to carp about it or not.
+	if ( ! defined $self->{wk2fnum}) {
+		carp "warning: wk_names contains $wk"."->"
+			.$self->{data}{wk_names}{$wk}
+			." but "
+			.$self->{data}{wk_names}{$wk}
+			." is not in the fields list - ignored\n";
+	}
+	return undef;
+}
+
+# convert a field name to a field number
+sub fname2fnum
+{
+	my ( $self, $fname ) = @_;
+
+	$self->init_fname2fnum() or return undef;
+	return $self->{fname2fnum}{$fname};
+}
+
+# convert well-known name to field number
+sub wk2fnum
+{
+	my ( $self, $wk ) = @_;
+
+	$self->init_wk2fnum() or return undef;
+	return $self->{wk2fnum}{$wk};
+}
+
+#
+# format handler functions
+# these do not have their own POD docs, but are defined in the
+# $obj->do_actions() docs above
+#
+
+# HTML format handler
+sub fmt_handler_html
+{
+	my ( $self, $filename, $params ) = @_;
+	my $records = $self->{data}{records};
+
+	# if we need to filter or sort, make a copy of the data records
+	if (( defined $params->{filter_func})
+		or ( defined $params->{sort_func}))
+	{
+		# filter/select items in the table if filter function exists
+		my $i;
+		if (( defined $params->{filter_func})
+			and ref $params->{filter_func} eq "CODE" )
+		{
+			# create the new table
+			$records = [];
+
+			for ($i=0; $i<scalar(@{$self->{data}{records}}); $i++)
+			{
+				if ( &{$params->{filter_func}}(
+					@{$self->{data}{records}[$i]}))
+				{
+					unshift @$records,
+						$self->{data}{records}[$i];
+				}
+			}
+		} else {
+			# copy all the references in the table over
+			# don't mess with the data itself
+			$records = [ @{$self->{data}{records}} ];
+		}
+
+		# sort the table if sort/compare function is present
+		if (( defined $params->{sort_func})
+			and ref $params->{sort_func} eq "CODE" )
+		{
+			$records = [ sort {&{$params->{sort_func}}($a,$b)}
+				@$records ];
+		}
+	}
+
+	if (( defined $params->{format_func})
+		and ref $params->{format_func} eq "CODE" )
+	{
+		$self->html_gen ( $filename,
+			$params->{format_func},
+			$records );
+		return;
+	}
+
+	# get local copies of the values from wk2fnum so that we can
+	# take advantage of closure scoping to grab these values instead
+	# of doing a table lookup for every value every time the format
+	# function iterates over every data item
+	my ( $title_fnum, $url_fnum, $date_fnum, $summary_fnum,
+		$comments_fnum, $author_fnum, $category_fnum,
+		$location_fnum ) = (
+			$self->wk2fnum("title"),
+			$self->wk2fnum("url"),
+			$self->wk2fnum("date"),
+			$self->wk2fnum("summary"),
+			$self->wk2fnum("comments"),
+			$self->wk2fnum("author"),
+			$self->wk2fnum("category"),
+			$self->wk2fnum("location"));
+
+	# generate the html and formatting function
+	# This does a lot of conditional inclusion of well-known fields,
+	# depending on their presence in a give data record.
+	# The $_[...] notation is used to grab the data because this
+	# anonymous function will be run once for every record in
+	# @{$self->{data}{records}} with the data array/record passed
+	# to it as the function's parameters.
+	$self->html_gen ( $filename,
+		sub { return ""
+			.((defined $title_fnum )
+				? ((defined $url_fnum )
+					? "<a href=\"".$_[$url_fnum]."\">"
+					: "")
+				.$_[$title_fnum]
+				.((defined $url_fnum )
+					? "</a>"
+					: "")
+			: ((defined $summary_fnum )
+				? $_[$summary_fnum]
+				: "" ))
+			.((defined $comments_fnum )
+				? " (".$_[$comments_fnum].")"
+				: "" )},
+			$records );
+}
+
+# XML format handler
+# This generates a "standalone" XML document with its own built-in DTD
+# to define the fields.
+# Note: we couldn't use XML::Writer because it only writes to a filehandle.
+sub fmt_handler_xml
+{
+	my ( $self, $filename ) = @_;
+	my ( @xml, $record, $field, $indent );
+
+	# generate XML prolog/heading with a dynamically-generated XML DTD
+	$indent = " " x 4;
+	push @xml, "<?xml version=\"1.0\" standalone=\"yes\" ?>";
+	push @xml, "";
+	push @xml, "<!DOCTYPE webfetch_dynamic [";
+	push @xml, $indent."<!ELEMENT webfetch_dynamic (record*)>";
+	push @xml, $indent."<!ELEMENT record ("
+		.join( ", ", @{$self->{data}{fields}})
+		.")>";
+	for ( $field = 0; $field < scalar @{$self->{data}{fields}}; $field++ )
+	{
+		push @xml, $indent.
+			"<!ELEMENT ".$self->{data}{fields}[$field]
+			."(#PCDATA)>";
+	}
+	push @xml, "]>";
+	push @xml, "";
+
+	# generate XML content
+	push @xml, "<webfetch_dynamic>";
+	foreach $record ( @{$self->{data}{records}}) {
+		push @xml, $indent."<record>";
+		for ( $field = 0; $field < scalar @{$self->{data}{fields}};
+			$field++ )
+		{
+			push @xml, ( $indent x 2 )
+				."<".$self->{data}{fields}[$field].">";
+			push @xml, ( $indent x 3 )
+				.$record->[$field];
+			push @xml, ( $indent x 2 )
+				."</".$self->{data}{fields}[$field].">";
+		}
+		push @xml, $indent."</record>";
+	}
+	push @xml, "</webfetch_dynamic>";
+
+	# store the XML text as a savable
+	$self->raw_savable( $filename, join ( "\n", @xml )."\n" );
+}
+
+# WebFetch::General format handler
+sub fmt_handler_wf
+{
+	my ( $self, $filename ) = @_;
+
+	$self->wf_export( $filename,
+		$self->{data}{fields},
+		$self->{data}{records},
+		"Exported from ".(ref $self)."\n"
+			."fields are "
+			.join(", ", @{$self->{data}{fields}})."\n" );
+}
+
+# RDF format handler
+sub fmt_handler_rdf
+{
+	my ( $self, $filename, $site_title, $site_link, $site_desc,
+		$image_title, $image_url ) = @_;
+
+	# get the field numbers for the well-known fields for title and url
+	my ( $title_fnum, $url_fnum, );
+	$title_fnum = $self->wk2fnum("title");
+	$url_fnum = $self->wk2fnum("url");
+
+	# if title or url is missing, we have to abort with an error message
+	if (( !defined $title_fnum ) or ( !defined $url_fnum )) {
+		my %savable = ( "file" => $filename,
+			"error" => "cannot RDF export with missing fields: "
+				.((!defined $title_fnum ) ? "title " : "" )
+				.((!defined $url_fnum ) ? "url " : "" ));
+		if ( !defined $self->{savable}) {
+			$self->{savable} = [];
+		}
+		push @{$self->{savable}}, \%savable;
+		return;
+	}
+
+	# check if we can shortcut the array processing
+	my $data;
+	if ( $title_fnum == 0 and $url_fnum == 1 ) {
+		$data = $self->{data}{records};
+	} else {
+		# oh well, the fields weren't in the right order
+		# extract a copy that contains title and url fields
+		my $entry;
+		$data = [];
+		foreach $entry ( @{$self->{data}{records}}) {
+			push @$data, [ $entry->[$title_fnum],
+				$entry->[$url_fnum]];
+		}
+	}
+	$self->ns_export( $filename, $data,
+		$site_title, $site_link, $site_desc, $image_title,
+		$image_url );
+}
 
 1;
 __END__
 # remainder of POD docs follow
-
-=back
 
 =head2 WRITING NEW WebFetch-DERIVED MODULES
 
@@ -1303,6 +2146,13 @@ B<C<@Options>> and B<C<$Usage>> variables.
 Don't forget to add documentation for your command-line options
 and remove old documentation for any you removed.
 
+When adding documentation, if the existing formatting isn't enough
+for your changes, there's more information about
+Perl's
+POD ("plain old documentation")
+embedded documentation format at
+http://www.cpan.org/doc/manual/html/pod/perlpod.html
+
 =item authors
 
 Add yourself as an author if you added any significant functionality.
@@ -1318,14 +2168,14 @@ Use the one in WebFetch::SiteNews as an example if you need to.
 =back
 
 Please consider contributing any useful changes back to the WebFetch
-project at C<webfetch-maint@svlug.org>.
+project at C<maint@webfetch.org>.
 
 =head1 AUTHOR
 
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 WebFetch is Open Source software distributed via the
 Comprehensive Perl Archive Network (CPAN),
@@ -1334,15 +2184,15 @@ WebFetch may be copied under the same terms and licensing as Perl itelf.
 
 =for html
 A current copy of the source code and documentation may be found at
-<a href="http://www.svlug.org/sw/webfetch/">http://www.svlug.org/sw/webfetch/</a>
+<a href="http://www.webfetch.org/">http://www.webfetch.org/</a>
 
 =for text
 A current copy of the source code and documentation may be found at
-http://www.svlug.org/sw/webfetch/
+http://www.webfetch.org/
 
 =for man
 A current copy of the source code and documentation may be found at
-http://www.svlug.org/sw/webfetch/
+http://www.webfetch.org/
 
 =head1 SEE ALSO
 

@@ -15,7 +15,7 @@ use Exporter;
 use AutoLoader;
 use Carp;
 use WebFetch;;
-use Date::Calc qw(Delta_Days);;
+use Date::Calc qw(Today Delta_Days Month_to_Text);
 
 @ISA = qw(Exporter AutoLoader WebFetch);
 # Items to export into callers namespace by default. Note: do not export
@@ -41,10 +41,6 @@ $WebFetch::SiteNews::num_links = 5;
 
 # no user-servicable parts beyond this point
 
-# array indices
-sub entry_text { 0; }
-sub entry_priority { 1; }
-
 # constants for state names
 sub initial_state { 0; }
 sub attr_state { 1; }
@@ -57,19 +53,34 @@ sub fetch
 	my ( $self ) = @_;
 
 	# set parameters for WebFetch routines
-	$self->{num_links} = $WebFetch::SiteNews::num_links;
+	if ( !defined $self->{num_links}) {
+		$self->{num_links} = $WebFetch::SiteNews::num_links;
+	}
+	if ( !defined $self->{style}) {
+		$self->{style} = {};
+		$self->{style}{para} = 1;
+	}
+
+	# set up Webfetch Embedding API data
+	$self->{data} = {}; 
+	$self->{actions} = {}; 
+	$self->{data}{fields} = [ "date", "title", "priority", "expired",
+		"position", "label", "url", "category", "text" ];
+	# defined which fields match to which "well-known field names"
+	$self->{data}{wk_names} = {
+		"title" => "title",
+		"url" => "url",
+		"date" => "date",
+		"summary" => "text",
+		"category" => "category"
+	};
+	$self->{data}{records} = [];
 
 	# process the links
 
 	# get local time for various date comparisons
-	{
-		$now = [ localtime ];
-		$now->[4]++;       # month
-		$now->[5] += 1900; # year (yes, this is Y2K safe)
-		my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) 
-			= @$now;
-		$nowstamp = sprintf "%04d%02d%02d", $year, $mon, $mday;
-	}
+	$now = [ Today ];
+	$nowstamp = sprintf "%04d%02d%02d", @$now;
 
 	# parse data file
 	my $input;
@@ -77,90 +88,65 @@ sub fetch
 		$self->parse_input( $input );
 	}
 
-	# save short/summary version of news
-	my @short_news = sort for_short @{$self->{news_items}};
-	my ( @short_links, $i );
-	for ( $i = 0; $i <= $#short_news; $i++ ) {
-		# skip expired items (they were sorted to the end of the list)
-		if ( expired( $short_news[$i])) {
-			last;
-		}
-		push ( @short_links,
-			[ $short_news[$i]{text}, priority($short_news[$i]) ]);
+	# set parameters for the short news format
+	if ( defined $short_path ) {
+		# create the HTML actions list
+		$self->{actions}{html} = [];
+
+		# create the HTML-generation parameters
+		my $params = {};
+		$params = {};
+		$params->{sort_func} = sub {
+			my ( $a, $b ) = @_;
+
+			# sort/compare news entries for the short display
+			# sorting priority:
+			#	expiration status first (expired items last)
+			#	priority second (category/age combo)
+			#	label third (chronological order)
+
+			# check expirations first
+			my $exp_fnum = $self->fname2fnum("expired");
+			( $a->[$exp_fnum] and !$b->[$exp_fnum]) and return 1;
+			( !$a->[$exp_fnum] and $b->[$exp_fnum]) and return -1;
+
+			# compare priority - posting category w/ age penalty
+			my $pri_fnum = $self->fname2fnum("priority");
+			if ( $a->[$pri_fnum] != $b->[$pri_fnum] ) {
+				return $a->[$pri_fnum] <=> $b->[$pri_fnum];
+			}
+
+			# otherwise sort by label (chronological order)
+			my $lbl_fnum = $self->fname2fnum("label");
+			return $a->[$lbl_fnum] cmp $b->[$lbl_fnum];
+		};
+		$params->{filter_func} = sub {
+			# filter: skip expired items
+			my $exp_fnum = $self->fname2fnum("expired");
+			return ! $_[$exp_fnum];
+		};
+		$params->{format_func} = sub {
+			# generate HTML text
+			my $txt_fnum = $self->fname2fnum("text");
+			my $pri_fnum = $self->fname2fnum("priority");
+			return $_[$txt_fnum]
+				."\n<!--- priority ".$_[$pri_fnum]." --->";
+		};
+
+		# put parameters for fmt_handler_html() on the html list
+		push @{$self->{actions}{html}}, [ $short_path, $params ];
 	}
-	if ( !defined $self->{style}) {
-		$self->{style} = {};
-		$self->{style}{para} = 1;
+
+	# set parameters for the long news format
+	if ( defined $long_path ) {
+		# create the SiteNews-specific action list
+		# It will use WebFetch::SiteNews::fmt_handler_sitenews_long()
+		# which is defined in this file
+		$self->{actions}{sitenews_long} = [];
+
+		# put parameters for fmt_handler_sitenews_long() on the list
+		push @{$self->{actions}{sitenews_long}}, [ $long_path ];
 	}
-	$self->html_gen( $short_path,
-		sub { return $_[&entry_text]
-			."\n<!--- priority ".$_[&entry_priority]." --->"; },
-		\@short_links );
-
-	# sort events for long display
-	my @long_news = sort for_long @{$self->{news_items}};
-
-	# process the links for the long list
-	my ( @long_text, $prev, @news_export, %label_hash, @label_list,
-		$url_prefix );
-	$url_prefix = ( defined $self->{url_prefix})
-		? $self->{url_prefix}
-		: "";
-	$prev=undef;
-	push @long_text, "<dl>";
-	for ( $i = 0; $i <= $#long_news; $i++ ) {
-		my $news = $long_news[$i];
-		if (( ! defined $prev->{posted}) or
-			$prev->{posted} ne $news->{posted})
-		{
-			push @long_text, "<dt>".printstamp($news->{posted});
-			push @long_text, "<dd>";
-		}
-		my $label = gen_label( \%label_hash, \@label_list, $news );
-		push @long_text, "<a name=\"$label\">".$news->{text}."</a>\n"
-			."<!--- priority: ".priority($news)
-			.(expired($news) ? " expired" : "")
-			." --->";
-		push @long_text, "<p>";
-		if ( ! expired($news)) {
-			push @news_export,
-				[ printstamp($news->{posted}),
-				( defined $news->{title})
-					? $news->{title} : $news->{text},
-				$url_prefix."#".$label,
-				$news->{text}];
-		}
-		$prev = $news;
-	}
-	push @long_text, "</dl>";
-
-	# store it for later save to disk
-	$self->html_savable( $long_path, join("\n",@long_text)."\n" );
-
-        # export content if --export was specified
-        if ( defined $self->{export}) {
-                $self->wf_export( $self->{export},
-                        [ "date", "title", "url", "text" ],
-                        \@news_export,
-                        "Exported from WebFetch::SiteNews\n"
-                                ."\"date\" is the date of the news\n"
-                                ."\"title\" is a one-liner title\n"
-                                ."\"url\" is url to the news source\n"
-                                ."\"text\" is the news text" );
-        }
-
-        # export content if --ns_export was specified
-        if ( defined $self->{ns_export}) {
-		my ( @ns_list );
-		foreach ( sort { $b cmp $a } @label_list ) {
-			push @ns_list, [ $label_hash{$_},
-				$url_prefix."#".$_ ];
-		}
-                $self->ns_export( $self->{ns_export}, \@ns_list,
-			$self->{ns_site_title}, $self->{ns_site_link},
-			$self->{ns_site_desc}, $self->{ns_image_title},
-			$self->{ns_image_url} );
-        }
 }
 
 # parse input file
@@ -172,7 +158,7 @@ sub parse_input
 	if ( ! open ( news_data, $input )) {
 		croak "$0: failed to open $input: $!\n";
 	}
-	$self->{news_items} = [];
+	my @news_items;
 	my $position = 0;
 	my $state = initial_state;		# before first entry
 	my ( $current );
@@ -205,7 +191,7 @@ sub parse_input
 					$current = {};
 					$current->{position} = $position++;
 					$current->{$1} = $2;
-					push( @{$self->{news_items}}, $current );
+					push( @news_items, $current );
 					$state = attr_state;
 				}
 			} elsif ( $state == attr_state ) {
@@ -229,25 +215,106 @@ sub parse_input
 			}
 		}
 	}
+
+	# translate parsed news into the WebFetch Embedding API data table
+	my ( $item, %label_hash, $pos );
+	$pos = 0;
+	foreach $item ( @news_items ) {
+
+		# generate an intra-page link label
+		my ( $label, $count );
+		$count=0;
+		while (( $label = $item->{posted}."-".sprintf("%03d",$count)),
+			defined $label_hash{$label})
+		{
+			$count++;
+		}
+		$label_hash{$label} = 1;
+
+		# save the data record
+		my $title = ( defined $item->{title}) ? $item->{title} : "";
+		my $posted = ( defined $item->{posted}) ? $item->{posted} : "";
+		my $category = ( defined $item->{category})
+			? $item->{category} : "";
+		my $text = ( defined $item->{text}) ? $item->{text} : "";
+		my $url_prefix = ( defined $self->{url_prefix})
+			? $self->{url_prefix} : "";
+		push @{$self->{data}{records}},
+			[ printstamp($posted), $title, priority( $item ),
+				expired( $item ), $pos, $label,
+				$url_prefix."#".$label, $category, $text ];
+		$pos++;
+	}
+}
+
+# format handler function specific to this module's long-news output format
+sub fmt_handler_sitenews_long
+{
+	my ( $self, $filename ) = @_;
+
+	# sort events for long display
+	my @long_news = sort {
+		# sort news entries for long display
+		# sorting priority:
+		#	date first
+		#	category/priority second
+		#	reverse file order last	
+
+		# sort by date
+		my $lbl_fnum = $self->fname2fnum("label");
+		my ( $a_date, $b_date) = ( $a->[$lbl_fnum], $b->[$lbl_fnum]);
+		$a_date =~ s/-.*//;
+		$b_date =~ s/-.*//;
+		if ( $a_date ne $b_date ) {
+			return $b_date cmp $a_date;
+		}
+
+		# sort by priority (within same date)
+		my $pri_fnum = $self->fname2fnum("priority");
+		if ( $a->[$pri_fnum] != $b->[$pri_fnum] ) {
+			return $a->[$pri_fnum] <=> $b->[$pri_fnum];
+		}
+
+		# sort by chronological order (within same date and priority)
+		return $a->[$lbl_fnum] cmp $b->[$lbl_fnum];
+	} @{$self->{data}{records}};
+
+	# process the links for the long list
+	my ( @long_text, $prev, $url_prefix, $i );
+	$url_prefix = ( defined $self->{url_prefix})
+		? $self->{url_prefix}
+		: "";
+	$prev=undef;
+	push @long_text, "<dl>";
+	my $lbl_fnum = $self->fname2fnum("label");
+	my $date_fnum = $self->fname2fnum("date");
+	my $title_fnum = $self->fname2fnum("title");
+	my $txt_fnum = $self->fname2fnum("text");
+	my $exp_fnum = $self->fname2fnum("expired");
+	my $pri_fnum = $self->fname2fnum("priority");
+	for ( $i = 0; $i <= $#long_news; $i++ ) {
+		my $news = $long_news[$i];
+		if (( ! defined $prev->[$date_fnum]) or
+			$prev->[$date_fnum] ne $news->[$date_fnum])
+		{
+			push @long_text, "<dt>".$news->[$date_fnum];
+			push @long_text, "<dd>";
+		}
+		push @long_text, "<a name=\"".$news->[$lbl_fnum]."\">"
+			.$news->[$txt_fnum]."</a>\n"
+			."<!--- priority: ".$news->[$pri_fnum]
+			.($news->[$exp_fnum] ? " expired" : "")
+			." --->";
+		push @long_text, "<p>";
+		$prev = $news;
+	}
+	push @long_text, "</dl>";
+
+	# store it for later save to disk
+	$self->html_savable( $long_path, join("\n",@long_text)."\n" );
 }
 
 #---------------------------------------------------------------------------
-
-# function to print a timestamp in Human-readable form
-@month_name = (
-	"January",
-	"February",
-	"March",
-	"April",
-	"May",
-	"June",
-	"July",
-	"August",
-	"September",
-	"October",
-	"November",
-	"December"
-);
 
 #
 # utility functions
@@ -259,43 +326,7 @@ sub printstamp
 	my ( $stamp ) = @_;
 	my ( $year, $mon, $day ) = ( $stamp =~ /^(....)(..)(..)/ );
 
-	return $month_name[$mon-1]." ".int($day).", $year";
-}
-
-# generate and save an intra-document label
-sub gen_label
-{
-	my ( $label_hash, $label_list, $news ) = @_;
-
-	if ( ref($label_hash) ne "HASH" ) {
-		croak "WebFetch::SiteNews: label_hash parameter to gen_label "
-			."is not a hash reference\n";
-	}
-	if ( ref($label_list) ne "ARRAY" ) {
-		croak "WebFetch::SiteNews: label_list parameter to gen_label "
-			."is not an array reference\n";
-	}
-	if ( ref($news) ne "HASH" ) {
-		croak "WebFetch::SiteNews: news parameter to gen_label "
-			."is not a hash reference\n";
-	}
-	my ( $i, $label );
-	$i = 0;
-	while (( $label = $news->{posted}."-".sprintf("%03d",$i)),
-		defined $label_hash->{$label})
-	{
-		$i++;
-	}
-	
-	# do not export items which have expired
-	$label_hash->{$label} = (defined $news->{title})
-		? $news->{title}
-		: $news->{text};
-	if ( !expired($news) ) {
-		push @$label_list, $label;
-	}
-
-	return $label;
+	return Month_to_Text(int($mon))." ".int($day).", $year";
 }
 
 # function to detect if a news entry is expired
@@ -313,8 +344,7 @@ sub priority
 
 	( defined $entry->{posted}) or return 999;
 	my ( $year, $mon, $day ) = ( $entry->{posted} =~ /^(....)(..)(..)/ );
-	my $age = Delta_Days( $year, $mon, $day,
-		$now->[5], $now->[4], $now->[3]);
+	my $age = Delta_Days( $year, $mon, $day, @$now );
 	my $bonus = 0;
 
 	if ( $age <= 2 ) {
@@ -329,62 +359,6 @@ sub priority
 		return $cat_priorities->{"default"} + $age * 0.025
 			+ $bonus;
 	}
-}
-
-# function to sort news entries for short display
-# (moves expired entries  to end instead of leaving them in place)
-# sorting priority:
-#	expiration status first (puts expired items at end of list)
-#	category/priority second 
-#	date third
-#	file order last
-sub for_short
-{
-	# check expirations first
-	if ( expired($a) and !expired($b)) {
-		return 1;
-	}
-	if ( !expired($a) and expired($b)) {
-		return -1;
-	}
-
-	# compare posting category
-	if ( priority($a) != priority($b)) {
-		return priority($a) <=> priority($b)
-	}
-
-	# compare posting dates
-	if (( defined $a->{posted}) and ( defined $b->{posted}) and
-		( $a->{posted} ne $b->{posted} ))
-	{
-		return $b->{posted} cmp $a->{posted};
-	}
-
-	# otherwise resort to chronological order in the news data file
-	return $b->{position} <=> $a->{position};
-}
-
-# function to sort news entries for long display
-# sorting priority:
-#	date first
-#	category/priority second
-#	reverse file order last
-sub for_long
-{
-	# compare posting dates
-	if (( defined $a->{posted}) and ( defined $b->{posted}) and
-		( $a->{posted} ne $b->{posted} ))
-	{
-		return $b->{posted} cmp $a->{posted};
-	}
-
-	# compare posting category
-	if ( priority($a) != priority($b)) {
-		return priority($a) <=> priority($b)
-	}
-
-	# otherwise resort to chronological order in the news data file
-	return $b->{position} <=> $a->{position};
 }
 
 #---------------------------------------------------------------------------
@@ -405,9 +379,9 @@ C<use WebFetch::SiteNews;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::SiteNews C<-e> "&fetch_main" -- --dir I<directory>
-     --input I<news-file> --short I<short-form-output-file>
-     --long I<long-form-output-file>>
+C<perl -w -MWebFetch::SiteNews -e "&fetch_main" -- --dir directory
+     --input news-file --short short-form-output-file
+     --long long-form-output-file>
 
 =head1 DESCRIPTION
 
@@ -531,7 +505,7 @@ dropping a whole priority level every 40 days.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

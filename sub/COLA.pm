@@ -38,12 +38,6 @@ $WebFetch::COLA::url = $WebFetch::COLA::base."/cola-last-50.html";
 # initialization
 srand;
 
-# array indices
-sub entry_link { 0; }
-sub entry_text { 1; }
-sub entry_author { 2; }
-sub entry_date { 3; }
-
 sub fetch_main { WebFetch::run(); }
 
 sub fetch
@@ -51,13 +45,32 @@ sub fetch
 	my ( $self ) = @_;
 
 	# set parameters for WebFetch routines
-	$self->{url} = $WebFetch::COLA::url;
-	$self->{num_links} = $WebFetch::COLA::num_links;
-	$self->{table_sections} = $WebFetch::COLA::table_sections;
+	if ( ! defined $self->{url}) {
+		$self->{url} = $WebFetch::COLA::url;
+	}
+	if ( ! defined $self->{num_links}) {
+		$self->{num_links} = $WebFetch::COLA::num_links;
+	}
+	if ( ! defined $self->{filename}) {
+		$self->{filename} = $WebFetch::COLA::filename;
+	}
+
+        # set up Webfetch Embedding API data
+        $self->{data} = {}; 
+        $self->{actions} = {}; 
+        $self->{data}{fields} = [ "title", "url", "author", "date" ];
+        # defined which fields match to which "well-known field names"
+        $self->{data}{wk_names} = {
+                "title" => "title",
+                "url" => "url",
+                "author" => "author",
+                "date" => "date",
+        };
+        $self->{data}{records} = [];
 
 	# process the links
 	my $content = $self->get;
-	my ( @content_links, @lines );
+	my ( @lines );
 	@lines = split ( /\n/, $$content );
 	foreach ( @lines ) {
 		if ( /^\s*<strong>/ ) {
@@ -66,37 +79,37 @@ sub fetch
 			foreach $link ( @tmp_links ) {
 				#print "debug: link - $link\n";
 				if ( $link =~ /<strong><a href=\"([^"]+)\">([^<]+)<\/a><\/strong>\s*<em>([^<]+)<\/em> \(([-0-9]+)\)/ ) {
-					push ( @content_links, [ $1, $2, $3, $4 ]);
+					push ( @{$self->{data}{records}},
+						[ $2, $1, $3, $4 ]);
 				}
 			}
 		}
 	}
-	# sort backwards by date, shuffle it within each date
-	if (!( defined $no_shuffle ) or ! $no_shuffle ) {
-		@content_links = sort
-			{ ($a->[&entry_date] eq $b->[&entry_date]
+
+        # create the HTML actions list
+        $self->{actions}{html} = [];
+        my $params = {};
+	my $url_fnum = $self->fname2fnum("url");
+	my $title_fnum = $self->fname2fnum("title");
+	my $date_fnum = $self->fname2fnum("date");
+        $params->{format_func} = sub {
+                # generate HTML text
+                return "<a href=\"".$_[$url_fnum]."\">"
+                        .$_[$title_fnum]."</a>";
+        };
+	if ((!( defined $no_shuffle ) or !$no_shuffle )
+		and (!( defined $self->{no_shuffle} ) or !$self->{no_shuffle} ))
+	{
+		$params->{sort_func} = sub {
+			my ( $a, $b ) = @_;
+			($a->[$date_fnum] eq $b->[$date_fnum]
 				? ((rand(1) < 0.5) ? -1 : 1)
-				: ($b->[&entry_date] cmp $a->[&entry_date])) }
-			@content_links;
+				: ($b->[$date_fnum] cmp $a->[$date_fnum]));
+		};
 	}
-
-	$self->html_gen( $WebFetch::COLA::filename,
-		sub { return "<a href=\""
-			.$WebFetch::COLA::base."/".$_[&entry_link]."\">"
-			.$_[&entry_text]."</a>"; },
-		\@content_links );
-
-        # export content if --export was specified
-        if ( defined $self->{export}) {
-                $self->wf_export( $self->{export},
-                        [ "url", "title", "author", "date" ],
-                        \@content_links,
-                        "Exported from WebFetch::COLA\n"
-                                ."\"url\" is article URL\n"
-                                ."\"title\" is article title\n"
-                                ."\"author\" is article author\n"
-                                ."\"date\" is article date" );
-        }
+ 
+        # put parameters for fmt_handler_html() on the html list
+        push @{$self->{actions}{html}}, [ $self->{filename}, $params ];
 }
 
 1;
@@ -105,7 +118,7 @@ __END__
 
 =head1 NAME
 
-WebFetch::COLA - ews from the comp.os.linux.announce ("cola") newsgroup
+WebFetch::COLA - news from the comp.os.linux.announce ("cola") newsgroup
 
 =head1 SYNOPSIS
 
@@ -115,7 +128,7 @@ C<use WebFetch::COLA;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::COLA C<-e> "&fetch_main" -- --dir I<directory>
+C<perl -w -MWebFetch::COLA -e "&fetch_main" -- --dir directory
 	[--noshuffle]>
 
 =head1 DESCRIPTION
@@ -143,7 +156,7 @@ option to disable it.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

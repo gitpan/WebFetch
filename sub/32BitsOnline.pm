@@ -108,7 +108,7 @@ C<use WebFetch::32BitsOnline;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::32BitsOnline C<-e> "&fetch_main" -- --dir I<directory>
+C<perl -w -MWebFetch::32BitsOnline -e "&fetch_main" -- --dir directory
 	[--features] >
 
 =head1 DESCRIPTION
@@ -129,7 +129,7 @@ latest feature articles from 32BitsOnline instead.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 

@@ -28,14 +28,9 @@ use WebFetch;;
 $WebFetch::Freshmeat::filename = "freshmeat.html";
 $WebFetch::Freshmeat::num_links = 10;
 $WebFetch::Freshmeat::table_sections = 2;
-$WebFetch::Freshmeat::url = "http://freshmeat.net/files/freshmeat/recentnews.txt";
+$WebFetch::Freshmeat::url = "http://freshmeat.net/backend/recentnews.txt";
 
 # no user-servicable parts beyond this point
-
-# array indices
-sub entry_text { 0; }
-sub entry_time { 1; }
-sub entry_link { 2; }
 
 sub fetch_main { WebFetch::run(); }
 
@@ -44,35 +39,60 @@ sub fetch
 	my ( $self ) = @_;
 
 	# set parameters for WebFetch routines
-	$self->{url} = $WebFetch::Freshmeat::url;
-	$self->{num_links} = $WebFetch::Freshmeat::num_links;
-	$self->{table_sections} = $WebFetch::Freshmeat::table_sections;
+	if ( ! defined $self->{url}) {
+		$self->{url} = $WebFetch::Freshmeat::url;
+	}
+	if ( ! defined $self->{num_links}) {
+		$self->{num_links} = $WebFetch::Freshmeat::num_links;
+	}
+	if ( ! defined $self->{table_sections}) {
+		$self->{table_sections} = $WebFetch::Freshmeat::table_sections;
+	}
+	if ( ! defined $self->{filename}) {
+		$self->{filename} = $WebFetch::Freshmeat::filename;
+	}
+
+	# set up Webfetch Embedding API data
+	$self->{data} = {}; 
+	$self->{actions} = {}; 
+	$self->{data}{fields} = [ "title", "date", "url" ];
+	# defined which fields match to which "well-known field names"
+	$self->{data}{wk_names} = {
+		"title" => "title",
+		"url" => "url",
+		"date" => "date",
+	};
+	$self->{data}{records} = [];
 
 	# process the links
 	my $content = $self->get;
-	my ( @content_links, @lines, $i );
+	my ( @lines, $i );
 	@lines = split ( /\n/, $$content );
 	while ( $#lines >= 0 and $lines[0] eq "" ) {
 	        shift @lines; shift @lines; shift @lines;
 	}
 	for ( $i = 0; $i < $#lines/3; $i++ ) {
-		push ( @content_links, [ @lines[($i*3)..($i*3+2)]]);
+		push ( @{$self->{data}{records}}, [ @lines[($i*3)..($i*3+2)]]);
 	}
-	$self->html_gen( $WebFetch::Freshmeat::filename,
-		sub { return "<a href=\"".$_[&entry_link]."\">"
-			.$_[&entry_text]."</a>"; },
-		\@content_links );
 
-	# export content if --export was specified
-	if ( defined $self->{export}) {
-		$self->wf_export( $self->{export},
-			[ "title", "time", "url" ],
-			\@content_links,
-			"Exported from WebFetch::Freshmeat\n"
-				."\"title\" is article title\n"
-				."\"time\" is timestamp\n"
-				."\"url\" is article URL" );
-	}
+	# set parameters for saving to HTML
+
+	# create the HTML actions list
+	$self->{actions}{html} = [];
+
+	# create the HTML-generation parameters
+	my $params = {};
+	$params = {};
+	$params->{format_func} = sub {
+		# generate HTML text
+		my $url_fnum = $self->fname2fnum("url");
+		my $title_fnum = $self->fname2fnum("title");
+		return "<a href=\"".$_[$url_fnum]."\">"
+			.$_[$title_fnum]."</a>";
+	};
+
+	# put parameters for fmt_handler_html() on the html list
+	push @{$self->{actions}{html}}, [ $self->{filename}, $params ];
 }
 
 1;
@@ -91,7 +111,7 @@ C<use WebFetch::Freshmeat;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::Freshmeat C<-e> "&fetch_main" -- --dir I<directory>>
+C<perl -w -MWebFetch::Freshmeat -e "&fetch_main" -- --dir directory>
 
 =head1 DESCRIPTION
 
@@ -106,7 +126,7 @@ C<Ofreshmeat.html>.
 WebFetch was written by Ian Kluft
 for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
-C<webfetch-maint@svlug.org>.
+C<maint@webfetch.org>.
 
 =head1 SEE ALSO
 
