@@ -1,10 +1,17 @@
-Revision history for Perl extension WebFetch
+Revision history for the WebFetch modules for Perl5
+
+0.08 Sun Aug  1 22:58:48 PDT 1999
+      - added WebFetch::DebianNews, contributed by Chuck Ritter
+      - updated TODO with plans for site configuration, and
+        prioritization notes about what's required for WebFetch 1.0
+      - added --noshuffle to WebFetch::COLA
+      - updated WebFetch core docs, moved style parameter docs to command line
 
 0.07 Tue Jul  6 05:50:29 PDT 1999
       - obsoleted WebFetch::EGAuthors because they change their site too
         often to keep up with
       - added WebFetch::CNETnews, contributed by Jamie Heilman
-      - updated WeBFetch::CNNsearch to allow keyword-only searches.
+      - updated WebFetch::CNNsearch to allow keyword-only searches.
         This became necessary when a Linux story got on all the
 	"in other news" pages at CNN and suddenly all pages on CNN
 	matched a search for Linux.  This release also fixed a bug

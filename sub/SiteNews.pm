@@ -9,7 +9,7 @@
 package WebFetch::SiteNews;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @Options $Usage $input $short_path $long_path $cat_priorities @month_name $now $nowstamp $ns_exp_file );
+use vars qw($VERSION @ISA @EXPORT @Options $Usage @input $short_path $long_path $cat_priorities @month_name $now $nowstamp $ns_exp_file );
 
 use Exporter;
 use AutoLoader;
@@ -31,7 +31,7 @@ $long_path = undef;
 $ns_exp_file = undef;
 
 @Options = (
-	"input=s" => \$input,
+	"input=s@" => \@input,
 	"short=s" => \$short_path,
 	"long=s" => \$long_path);
 $Usage = "--input news-file --short short-output-file --long long-output-file";
@@ -72,69 +72,13 @@ sub fetch
 	}
 
 	# parse data file
-	if ( ! open ( news_data, $input )) {
-		croak "$0: failed to open $input: $!\n";
-	}
-	my @news_items = ();
-	my $position = 0;
-	my $state = initial_state;		# before first entry
-	my ( $current );
-	$cat_priorities = {};                   # priorities for sorting
-	while ( <news_data> ) {
-		chop;
-		/^\s*\#/ and next;	# skip comments
-		/^\s*$/ and next;	# skip blank lines
-
-		if ( /^[^\s]/ ) {
-			# found attribute line
-			if ( $state == initial_state ) {
-				if ( /^categories:\s*(.*)/ ) {
-					my @cats = split ( /\s+/, $1 );
-					my ( $i );
-					$cat_priorities->{"default"} = 999;
-					for ( $i=0; $i<=$#cats; $i++ ) {
-						$cat_priorities->{$cats[$i]}
-							= $i + 1;
-					}
-					next;
-				} elsif ( /^url-prefix:\s*(.*)/ ) {
-					$self->{url_prefix} = $1;
-				}
-			}
-			if ( $state == initial_state or $state == text_state )
-			{
-				# found first attribute of a new entry
-				if ( /^([^=]+)=(.*)/ ) {
-					$current = {};
-					$current->{position} = $position++;
-					$current->{$1} = $2;
-					push ( @news_items, $current );
-					$state = attr_state;
-				}
-			} elsif ( $state == attr_state ) {
-				# found a followup attribute
-				if ( /^([^=]+)=(.*)/ ) {
-					$current->{$1} = $2;
-				}
-			}
-		} else {
-			# found text line
-			if ( $state == initial_state ) {
-				# cannot accept text before any attributes
-				next;
-			} elsif ( $state == attr_state or $state == text_state ) {
-				if ( defined $current->{text}) {
-					$current->{text} .= "\n$_";
-				} else {
-					$current->{text} = $_;
-				}
-				$state = text_state;
-			}
-		}
+	my $input;
+	foreach $input ( @input ) {
+		$self->parse_input( $input );
 	}
 
 	# save short/summary version of news
-	my @short_news = sort for_short @news_items;
+	my @short_news = sort for_short @{$self->{news_items}};
 	my ( @short_links, $i );
 	for ( $i = 0; $i <= $#short_news; $i++ ) {
 		# skip expired items (they were sorted to the end of the list)
@@ -146,15 +90,15 @@ sub fetch
 	}
 	if ( !defined $self->{style}) {
 		$self->{style} = {};
+		$self->{style}{para} = 1;
 	}
-	$self->{style}{para} = 1;
 	$self->html_gen( $short_path,
 		sub { return $_[&entry_text]
 			."\n<!--- priority ".$_[&entry_priority]." --->"; },
 		\@short_links );
 
 	# sort events for long display
-	my @long_news = sort for_long @news_items;
+	my @long_news = sort for_long @{$self->{news_items}};
 
 	# process the links for the long list
 	my ( @long_text, $prev, @news_export, %label_hash, @label_list,
@@ -217,6 +161,74 @@ sub fetch
 			$self->{ns_site_desc}, $self->{ns_image_title},
 			$self->{ns_image_url} );
         }
+}
+
+# parse input file
+sub parse_input
+{
+	my ( $self, $input ) = @_;
+
+	# parse data file
+	if ( ! open ( news_data, $input )) {
+		croak "$0: failed to open $input: $!\n";
+	}
+	$self->{news_items} = [];
+	my $position = 0;
+	my $state = initial_state;		# before first entry
+	my ( $current );
+	$cat_priorities = {};                   # priorities for sorting
+	while ( <news_data> ) {
+		chop;
+		/^\s*\#/ and next;	# skip comments
+		/^\s*$/ and next;	# skip blank lines
+
+		if ( /^[^\s]/ ) {
+			# found attribute line
+			if ( $state == initial_state ) {
+				if ( /^categories:\s*(.*)/ ) {
+					my @cats = split ( /\s+/, $1 );
+					my ( $i );
+					$cat_priorities->{"default"} = 999;
+					for ( $i=0; $i<=$#cats; $i++ ) {
+						$cat_priorities->{$cats[$i]}
+							= $i + 1;
+					}
+					next;
+				} elsif ( /^url-prefix:\s*(.*)/ ) {
+					$self->{url_prefix} = $1;
+				}
+			}
+			if ( $state == initial_state or $state == text_state )
+			{
+				# found first attribute of a new entry
+				if ( /^([^=]+)=(.*)/ ) {
+					$current = {};
+					$current->{position} = $position++;
+					$current->{$1} = $2;
+					push( @{$self->{news_items}}, $current );
+					$state = attr_state;
+				}
+			} elsif ( $state == attr_state ) {
+				# found a followup attribute
+				if ( /^([^=]+)=(.*)/ ) {
+					$current->{$1} = $2;
+				}
+			}
+		} else {
+			# found text line
+			if ( $state == initial_state ) {
+				# cannot accept text before any attributes
+				next;
+			} elsif ( $state == attr_state or $state == text_state ) {
+				if ( defined $current->{text}) {
+					$current->{text} .= "\n$_";
+				} else {
+					$current->{text} = $_;
+				}
+				$state = text_state;
+			}
+		}
+	}
 }
 
 #---------------------------------------------------------------------------
@@ -401,8 +413,15 @@ C<perl C<-w> -MWebFetch::SiteNews C<-e> "&fetch_main" -- --dir I<directory>
 
 This module gets the current headlines from a site-local file.
 
+The I<--input> parameter specifies a file name which contains news to be
+posted.  See L<"FILE FORMAT"> below for details on contents to put in the
+file.  I<--input> may be specified more than once, allowing a single news
+output to come from more than one input.  For example, one file could be
+manually maintained in CVS or RCS and another could be entered from a
+web form.
+
 After this runs, the file C<site_news.html> will be created or replaced.
-If there already was an C<site_news.html> file, it will be moved to
+If there already was a C<site_news.html> file, it will be moved to
 C<Osite_news.html>.
 
 =head1 FILE FORMAT

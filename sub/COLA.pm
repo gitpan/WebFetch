@@ -10,7 +10,7 @@
 package WebFetch::COLA;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @Options $Usage );
+use vars qw($VERSION @ISA @EXPORT @Options $Usage $no_shuffle );
 
 use Exporter;
 use AutoLoader;
@@ -24,8 +24,8 @@ use WebFetch;;
 
 );
 
-@Options = ();
-$Usage = "";
+@Options = ( "noshuffle" => \$no_shuffle );
+$Usage = "[--noshuffle]";
 
 # configuration parameters
 $WebFetch::COLA::filename = "cola.html";
@@ -72,11 +72,13 @@ sub fetch
 		}
 	}
 	# sort backwards by date, shuffle it within each date
-	@content_links = sort
-	        { ($a->[&entry_date] eq $b->[&entry_date]
-			? ((rand(1) < 0.5) ? -1 : 1)
-			: ($b->[&entry_date] cmp $a->[&entry_date])) }
-		@content_links;
+	if (!( defined $no_shuffle ) or ! $no_shuffle ) {
+		@content_links = sort
+			{ ($a->[&entry_date] eq $b->[&entry_date]
+				? ((rand(1) < 0.5) ? -1 : 1)
+				: ($b->[&entry_date] cmp $a->[&entry_date])) }
+			@content_links;
+	}
 
 	$self->html_gen( $WebFetch::COLA::filename,
 		sub { return "<a href=\""
@@ -114,6 +116,7 @@ C<use WebFetch::COLA;>
 From the command line:
 
 C<perl C<-w> -MWebFetch::COLA C<-e> "&fetch_main" -- --dir I<directory>
+	[--noshuffle]>
 
 =head1 DESCRIPTION
 
@@ -131,6 +134,9 @@ sorts by date but shuffles items which are listed as being on the same date.
 The webmaster is advised to include a link to the COLA archive
 near the headline list so readers can peruse it if anything listed
 gets their attention.
+
+If the shuffle feature is not desired, use the "--noshuffle" command-line
+option to disable it.
 
 =head1 AUTHOR
 

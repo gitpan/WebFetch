@@ -1,14 +1,26 @@
 #
 # WebFetch - infrastructure for downloading ("fetching") information from
 # various sources around the Internet or the local system in order to
-# present them for display
+# present them for display, or to export local information to other sites
+# on the Internet
 #
 # Copyright (c) 1998,1999 Ian Kluft. All rights reserved. This program is
 # free software; you can redistribute it and/or modify it under the
 # same terms as Perl itself.
 #
-# $Revision: 1.21 $
+# Revisions listed below are only for this file, not the WebFetch package.
+#
+# $Revision: 1.23 $
 # $Log: WebFetch.pm,v $
+# Revision 1.23  1999/08/02 05:50:59  ikluft
+# updated version to 0.08
+# added reference to DebianNews module
+# moves style parameter docs
+#
+# Revision 1.22  1999/07/13 08:38:24  ikluft
+# added notable and bullet styles
+# added docs
+#
 # Revision 1.21  1999/05/05 00:17:28  ikluft
 # we have been informed that the RDF format used by MyNetscape is actually
 # Reuters Distribution Format.  This is now documented.
@@ -155,7 +167,7 @@ use Data::Dumper;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw( );
-$VERSION = '0.07';
+$VERSION = '0.08';
 my $debug;
 
 # Preloaded methods go here.
@@ -842,7 +854,7 @@ sub ns_export
 		join ( "\n", @export_out )."\n" );
 }
 
-=item $obj->html_gen( $filename, $format_func, $links, [ $style ] )
+=item $obj->html_gen( $filename, $format_func, $links )
 
 This WebFetch utility function generates some common formats of
 HTML output used by WebFetch-derived modules.
@@ -870,16 +882,6 @@ a reference to an array of arrays of parameters for C<&$format_func>;
 each entry in the outer array is contents for a separate HTML line
 and a separate call to C<&$format_func>
 
-=item $style
-
-(optional) a hash reference with style parameter names/values
-that can modify the behavior of the funciton to use different HTML styles.
-The recognized values are enumerated with WebFetch's I<--style> command line
-option.
-(When they reach this point, they are no longer a comma-delimited string -
-WebFetch or another module has parsed them into a hash with the style
-name as the key and the integer 1 for the value.)
-
 =back
 
 Upon entry to this function, C<$obj> must contain the following attributes: 
@@ -903,6 +905,16 @@ See $obj->fetch for details on the contents of the C<savable> parameter
 (optional) if present, this specifies the number of table columns to use;
 the number of links from C<num_links> will be divided evenly between the
 columns
+
+=item style
+
+(optional) a hash reference with style parameter names/values
+that can modify the behavior of the funciton to use different HTML styles.
+The recognized values are enumerated with WebFetch's I<--style> command line
+option.
+(When they reach this point, they are no longer a comma-delimited string -
+WebFetch or another module has parsed them into a hash with the style
+name as the key and the integer 1 for the value.)
 
 =back
 
@@ -1336,6 +1348,7 @@ http://www.svlug.org/sw/webfetch/
 <a href="WebFetch::CNETnews.html">WebFetch::CNETnews</a>,
 <a href="WebFetch::CNNsearch.html">WebFetch::CNNsearch</a>,
 <a href="WebFetch::COLA.html">WebFetch::COLA</a>,
+<a href="WebFetch::DebianNews.html">WebFetch::DebianNews</a>,
 <a href="WebFetch::Freshmeat.html">WebFetch::Freshmeat</a>,
 <a href="WebFetch::LinuxToday.html">WebFetch::LinuxToday</a>,
 <a href="WebFetch::ListSubs.html">WebFetch::ListSubs</a>,
@@ -1346,14 +1359,14 @@ http://www.svlug.org/sw/webfetch/
 
 =for text
 perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
-WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
-WebFetch::PerlStruct,
+WebFetch::DebianNews, WebFetch::Freshmeat, WebFetch::LinuxToday,
+WebFetch::ListSubs, WebFetch::PerlStruct,
 WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
 
 =for man
 perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
-WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
-WebFetch::PerlStruct,
+WebFetch::DebianNews, WebFetch::Freshmeat, WebFetch::LinuxToday,
+WebFetch::ListSubs, WebFetch::PerlStruct,
 WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
 
 =cut

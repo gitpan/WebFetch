@@ -3,10 +3,16 @@
 
 ######################### We start with some black magic to print on failure.
 
-# Change 1..1 below to 1..last_test_to_print .
-# (It may become useful if the test is moved to ./t subdirectory.)
+BEGIN {
+	# enumerate modules for loading tests
+	@modules = ( "WebFetch::CNETnews", "WebFetch::CNNsearch",
+		"WebFetch::COLA", "WebFetch::DebianNews",
+		"WebFetch::Freshmeat", "WebFetch::General",
+		"WebFetch::LinuxToday", "WebFetch::ListSubs",
+		"WebFetch::SiteNews", "WebFetch::Slashdot",
+		"WebFetch::YahooBiz" );
 
-BEGIN { $| = 1; print "1..11\n"; }
+	$| = 1; print "1..".($#modules+2)."\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use WebFetch;
 $loaded = 1;
@@ -18,12 +24,7 @@ print "ok 1\n";
 # (correspondingly "not ok 13") depending on the success of chunk 13
 # of the test code):
 
-# module loading tests
-@modules = ( "WebFetch::CNETnews", "WebFetch::CNNsearch", "WebFetch::COLA",
-	"WebFetch::Freshmeat", "WebFetch::General", "WebFetch::LinuxToday",
-	"WebFetch::ListSubs", "WebFetch::SiteNews", "WebFetch::Slashdot",
-	"WebFetch::YahooBiz" );
-
+# perform module loading tests
 for ( $i=0; $i <= $#modules; $i++ ) {
 	if (( eval "require ".$modules[$i] ) and ! $@ ) {
 		print "ok ".($i+2)."\n";

@@ -9,6 +9,7 @@ sub/Makefile.PL
 sub/CNETnews.pm
 sub/CNNsearch.pm
 sub/COLA.pm
+sub/DebianNews.pm
 sub/Freshmeat.pm
 sub/General.pm
 sub/LinuxToday.pm
