@@ -6,6 +6,8 @@ TODO
 Makefile.PL
 test.pl
 sub/Makefile.PL
+sub/CNNsearch.pm
+sub/COLA.pm
 sub/EGAuthors.pm
 sub/Freshmeat.pm
 sub/General.pm

@@ -1,9 +1,21 @@
 Revision history for Perl extension WebFetch
 
-0.01  Mon Jan 11 02:56:15 PST 1999
-      - original version
-	(Though this is the first beta of WebFetch, this is a second
-	generation of code used to handle web-gathered news by SVLUG)
+0.04  Thu Apr  8 18:51:29 PDT 1999
+      - modified WebFetch::Slashdot so it can get Segfault.org headlines
+        and any other Slashdot-compatible site
+      - updated module dependencies in Makefile.PL (was missing Date::Calc
+        for WebFetch::SiteNews)
+      - added WebFetch::CNNsearch module
+      - added WebFetch::COLA module
+      - added --font_size and --font_face to WebFetch (all command lines)
+      - default WebFetch::General format now uses "title" instead of "text"
+      - fixed bad RE flags in WebFetch::General, captures more than one
+        field correctly now
+
+0.03  Sun Mar 21 22:22:03 PST 1999
+      - added documentation to WebFetch::General
+      - updated --ns_export capability when Netscape switched to use RDF
+      - fixed off-by-one error in WebFetch::SiteNews short news output
 
 0.02  Fri Jan 15 02:33:34 PST 1999
       - fixed a test.pl typo
@@ -12,7 +24,7 @@ Revision history for Perl extension WebFetch
       - added documentation to WebFetch::SiteNews
       - added --ns_export (MyNetscape export)
 
-0.03  Sun Mar 21 22:22:03 PST 1999
-      - added documentation to WebFetch::General
-      - updated --ns_export capability when Netscape switched to use RDF
-      - fixed off-by-one error in WebFetch::SiteNews short news output
+0.01  Mon Jan 11 02:56:15 PST 1999
+      - original version
+	(Though this is the first beta of WebFetch, this is a second
+	generation of code used to handle web-gathered news by SVLUG)

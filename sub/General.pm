@@ -27,7 +27,7 @@ $Usage = "--file output-filename --url source-url [--format format]";
 
 # configuration parameters
 $WebFetch::General::num_links = 5;
-$WebFetch::General::default_format = "<a href=\"%url%\">%text%</a>";
+$WebFetch::General::default_format = "<a href=\"%url%\">%title%</a>";
 
 # no user-servicable parts beyond this point
 
@@ -78,7 +78,7 @@ sub fetch
 
 	# split up the response into each of its subjects
 	my ( $part, @content_links );
-	my @fields = ( $self->{"format"} =~ /%([^%]*)%/ );
+	my @fields = ( $self->{"format"} =~ /%([^%]*)%/go );
 	foreach $part ( @parts ) {
 		my ( $fname, $subparts );
 		$subparts= [];
@@ -86,7 +86,7 @@ sub fetch
 			push @$subparts, "".((defined $part->{$fname})
 				? $part->{$fname} : "" );
 		}
-		push ( @content_links, $subparts);
+		push ( @content_links, $subparts );
 	}
         $self->html_gen( $WebFetch::General::filename,
                 sub { $self->wf_format(@_); },
@@ -107,7 +107,7 @@ sub wf_format
 	my $text = $self->{"format"};
 
 	while ( $text =~ /^([^%]*)%([^%]*)%(.*)/ ) {
-		$text = $1.($subparts[0]).$3;
+		$text = $1.((defined $subparts[0]) ? $subparts[0] : "").$3;
 		shift @subparts;
 	}
 	return $text;
@@ -119,7 +119,7 @@ __END__
 
 =head1 NAME
 
-WebFetch::General - download and save General headlines
+WebFetch::General - download and save headlines from other WebFetch sites
 
 =head1 SYNOPSIS
 
@@ -159,11 +159,11 @@ WebFetch::General uses a format string to generate HTML from the
 incoming data.
 The default format for retrieved data is
 
-<a href="%url%">%text%</a>
+<a href="%url%">%title%</a>
 
-This means that fields named "url" and "text" must exist in the incoming
+This means that fields named "url" and "title" must exist in the incoming
 WebFetch-exported data, and will be used to fill in the I<%url%> and
-I<%text%> strings, respectively.
+I<%title%> strings, respectively.
 You may use the --format parameter to specify any format you wish.
 But the field names you choose in the format must match fields defined
 in the input stream.
@@ -202,7 +202,7 @@ similar to RFC822 headers (i.e. as in e-mail and news.)
 The names of the fields are chosen by the exporting module.
 Though for the convenience of the user,
 the author of an exporting module should keep in mind the
-default WebFetch::General format uses fields called "url" and "text".
+default WebFetch::General format uses fields called "url" and "title".
 If you use fields by different names, warn your receiving users
 that they will need to make a format to use with WebFetch::General,
 though you may provide them with one in their setup instructions.

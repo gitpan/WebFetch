@@ -1,11 +1,12 @@
 WebFetch To-Do List
-$Revision: 1.3 $
+$Revision: 1.4 $
 ------------------------------------------------------------------------------
 
 * add docs for each WebFetch-derived module explaining better how to call
   it from within Perl.  (Current docs emphasize the command line because
   that's how it's been used.  But it isn't the only way to use it.)
 * add more fetch modules:
+  * calendar/upcoming events
   * ARRL W1AW bulletins
   * California State OES bulletins
   * others as submitted by users

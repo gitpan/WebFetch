@@ -9,6 +9,8 @@ WriteMakefile(
     'PREREQ_PM' => {
     	'LWP::UserAgent' => 0,
     	'HTTP::Request' => 0,
-	'Locale::Country' => 0
+	'Locale::Country' => 0,
+	'Date::Calc' => 0,
+	'Data::Dumper' => 0,
 	},
 );

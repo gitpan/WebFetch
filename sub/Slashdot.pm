@@ -13,7 +13,7 @@
 package WebFetch::Slashdot;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @Options $filtered_authors );
+use vars qw($VERSION @ISA @EXPORT @Options $filtered_authors $segfault_mode $alt_url $alt_file );
 
 use Exporter;
 use AutoLoader;
@@ -27,8 +27,14 @@ use WebFetch;;
 
 );
 $filtered_authors = [];
+$segfault_mode = 0;
+$alt_url = undef;
+$alt_file = undef;
 @Options = (
-	"filtered:s\@" => $filtered_authors
+	"filtered:s\@" => $filtered_authors,
+	"segfault" => \$segfault_mode,
+	"url:s" => \$alt_url,
+	"file:s" => \$alt_file
 );
 
 # configuration parameters
@@ -56,7 +62,21 @@ sub fetch
 	my ( $self ) = @_;
 
 	# set parameters for WebFetch routines
-	$self->{url} = $WebFetch::Slashdot::url;
+	if ( $segfault_mode ) {
+		# use segfault.org instead of slashdot.org
+		if ( ! defined $alt_file ) {
+			$alt_file = "segfault.html";
+		}
+		if ( ! defined $alt_url ) {
+			$alt_url = "http://segfault.org/stories.txt";
+		}
+	}
+	$self->{url} = ( defined $alt_url )
+		? $alt_url
+		: $WebFetch::Slashdot::url;
+	$self->{filename} = ( defined $alt_file )
+		? $alt_file
+		: $WebFetch::Slashdot::filename;
 	$self->{num_links} = $WebFetch::Slashdot::num_links;
 
 	# process the links
@@ -79,10 +99,13 @@ sub fetch
 	}
 
 	# generate HTML
-	$self->html_gen( $WebFetch::Slashdot::filename,
+	$self->html_gen( $self->{filename},
 		sub { return "<a href=\"".$_[&entry_link]."\">"
-			.$_[&entry_title]."</a> ("
-			.$_[&entry_numcomments].")"; },
+			.$_[&entry_title]."</a>".
+			(((defined $_[&entry_numcomments]) and
+				length($_[&entry_numcomments]) > 0 )
+			? " (".$_[&entry_numcomments].")"
+			: ""); },
 		\@content_links );
 
         # export content if --export was specified
@@ -110,7 +133,7 @@ __END__
 
 =head1 NAME
 
-WebFetch::Slashdot - download and save Slashdot headlines
+WebFetch::Slashdot - download and save Slashdot (or any Slashdot-compatible) headlines
 
 =head1 SYNOPSIS
 
@@ -120,24 +143,37 @@ C<use WebFetch::Slashdot;>
 
 From the command line:
 
-C<perl C<-w> -MWebFetch::Slashdot C<-e> "&fetch_main" -- --dir I<directory>>
+C<perl C<-w> -MWebFetch::Slashdot C<-e> "&fetch_main" -- --dir I<directory> [--segfault] [--alt_url I<url>]  [--alt_file I<file>]>
 
 Alternative command line to filter out specific authors:
 
-C<perl C<-w> -MWebFetch::Slashdot C<-e> "&fetch_main" -- --dir I<directory> --filter I<author>>
+C<perl C<-w> -MWebFetch::Slashdot C<-e> "&fetch_main" -- --dir I<directory> --filter I<author> [--segfault] [--alt_url I<url>]  [--alt_file I<file>]>
 
 =head1 DESCRIPTION
 
 This module gets the current headlines from Slashdot.org.
+It can also be directed to other sites because Slashdot's
+discussion forum software is Open Source and used elsewhere.
+
+The optional C<--alt_url> parameter allows you to select a different
+URL to get the headlines from.
 
 An optional command-line argument of C<--filter> may be used to
 filter out specific authors.
 This is not necessarily recommended but it was in use at
 SVLUG when this module was first developed.
 
-After this runs, the file C<sdot.html> will be created or replaced.
+After this runs,
+by default the file C<sdot.html> will be created or replaced.
 If there already was an C<sdot.html> file, it will be moved to
 C<Osdot.html>.
+These filenames can be overridden by the C<--alt_file> parameter.
+
+The optional C<--segfault> parameter is a flag that directs WebFetch::Slashdot
+to retreive headlines from Segfault.org and save them in a
+C<segfault.html> file.
+This parameter should not be used at the same time as
+C<--alt_url> and C<--alt_file> because they will override it.
 
 =head1 AUTHOR
 
