@@ -10,8 +10,11 @@
 #
 # Revisions listed below are only for this file, not the WebFetch package.
 #
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # $Log: WebFetch.pm,v $
+# Revision 1.24  1999/08/15 11:03:56  ikluft
+# added modules for 0.09
+#
 # Revision 1.23  1999/08/02 05:50:59  ikluft
 # updated version to 0.08
 # added reference to DebianNews module
@@ -167,7 +170,7 @@ use Data::Dumper;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw( );
-$VERSION = '0.08';
+$VERSION = '0.09';
 my $debug;
 
 # Preloaded methods go here.
@@ -1350,23 +1353,30 @@ http://www.svlug.org/sw/webfetch/
 <a href="WebFetch::COLA.html">WebFetch::COLA</a>,
 <a href="WebFetch::DebianNews.html">WebFetch::DebianNews</a>,
 <a href="WebFetch::Freshmeat.html">WebFetch::Freshmeat</a>,
+<a href="WebFetch::LinuxDevNet.html">WebFetch::LinuxDevNet</a>,
+<a href="WebFetch::LinuxTelephony.html">WebFetch::LinuxTelephony</a>,
 <a href="WebFetch::LinuxToday.html">WebFetch::LinuxToday</a>,
 <a href="WebFetch::ListSubs.html">WebFetch::ListSubs</a>,
 <a href="WebFetch::PerlStruct.html">WebFetch::PerlStruct</a>,
 <a href="WebFetch::SiteNews.html">WebFetch::SiteNews</a>,
 <a href="WebFetch::Slashdot.html">WebFetch::Slashdot</a>,
+<a href="WebFetch::32BitsOnline.html">WebFetch::32BitsOnline</a>,
 <a href="WebFetch::YahooBiz.html">WebFetch::YahooBiz</a>.
 
 =for text
 perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
-WebFetch::DebianNews, WebFetch::Freshmeat, WebFetch::LinuxToday,
+WebFetch::DebianNews, WebFetch::Freshmeat,
+WebFetch::LinuxDevNet, WebFetch::LinuxTelephony, WebFetch::LinuxToday,
 WebFetch::ListSubs, WebFetch::PerlStruct,
-WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
+WebFetch::SiteNews, WebFetch::Slashdot,
+WebFetch::32BitsOnline, WebFetch::YahooBiz.
 
 =for man
 perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
-WebFetch::DebianNews, WebFetch::Freshmeat, WebFetch::LinuxToday,
+WebFetch::DebianNews, WebFetch::Freshmeat,
+WebFetch::LinuxDevNet, WebFetch::LinuxTelephony, WebFetch::LinuxToday,
 WebFetch::ListSubs, WebFetch::PerlStruct,
-WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
+WebFetch::SiteNews, WebFetch::Slashdot,
+WebFetch::32BitsOnline, WebFetch::YahooBiz.
 
 =cut

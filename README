@@ -376,7 +376,7 @@ For more info see http://my.netscape.com/publish/
             present, the link on the image will be the same as your
             $site_link parameter.
 
-    $obj->html_gen( $filename, $format_func, $links, [ $style ] )
+    $obj->html_gen( $filename, $format_func, $links )
         This WebFetch utility function generates some common formats
         of HTML output used by WebFetch-derived modules. The HTML
         output is stored in the $obj->{savable} array, for which all
@@ -397,15 +397,6 @@ For more info see http://my.netscape.com/publish/
             contents for a separate HTML line and a separate call to
             `&$format_func'
 
-    $style  (optional) a hash reference with style parameter
-            names/values that can modify the behavior of the
-            funciton to use different HTML styles. The recognized
-            values are enumerated with WebFetch's *--style* command
-            line option. (When they reach this point, they are no
-            longer a comma-delimited string - WebFetch or another
-            module has parsed them into a hash with the style name
-            as the key and the integer 1 for the value.)
-
         Upon entry to this function, `$obj' must contain the
         following attributes:
 
@@ -424,6 +415,15 @@ For more info see http://my.netscape.com/publish/
             (optional) if present, this specifies the number of
             table columns to use; the number of links from
             `num_links' will be divided evenly between the columns
+
+    style   (optional) a hash reference with style parameter
+            names/values that can modify the behavior of the
+            funciton to use different HTML styles. The recognized
+            values are enumerated with WebFetch's *--style* command
+            line option. (When they reach this point, they are no
+            longer a comma-delimited string - WebFetch or another
+            module has parsed them into a hash with the style name
+            as the key and the integer 1 for the value.)
 
     $obj->html_savable( $filename, $content )
         This WebFetch utility function stores pre-generated HTML in
@@ -527,7 +527,7 @@ http://www.svlug.org/sw/webfetch/
 
 SEE ALSO
 perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
-WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
-WebFetch::PerlStruct,
+WebFetch::DebianNews, WebFetch::Freshmeat, WebFetch::LinuxToday,
+WebFetch::ListSubs, WebFetch::PerlStruct,
 WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
 

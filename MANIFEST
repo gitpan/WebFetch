@@ -12,11 +12,14 @@ sub/COLA.pm
 sub/DebianNews.pm
 sub/Freshmeat.pm
 sub/General.pm
+sub/LinuxDevNet.pm
+sub/LinuxTelephony.pm
 sub/LinuxToday.pm
 sub/ListSubs.pm
 sub/PerlStruct.pm
 sub/SiteNews.pm
 sub/Slashdot.pm
+sub/32BitsOnline.pm
 sub/YahooBiz.pm
 sub/OLD/EGAuthors.pm
 webfetch-pb.gif

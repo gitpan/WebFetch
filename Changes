@@ -1,5 +1,11 @@
 Revision history for the WebFetch modules for Perl5
 
+0.09 Sun Aug 15 03:56:47 PDT 1999
+      - added XML fetching for WebFetch::Slashdot, patch by Dan Sully
+      - added WebFetch::LinuxTelephony, contributed by Greg Youngblood
+      - added WebFetch::LinuxDevNet
+      - added WebFetch::32BitsOnline
+
 0.08 Sun Aug  1 22:58:48 PDT 1999
       - added WebFetch::DebianNews, contributed by Chuck Ritter
       - updated TODO with plans for site configuration, and
@@ -8,8 +14,8 @@ Revision history for the WebFetch modules for Perl5
       - updated WebFetch core docs, moved style parameter docs to command line
 
 0.07 Tue Jul  6 05:50:29 PDT 1999
-      - obsoleted WebFetch::EGAuthors because they change their site too
-        often to keep up with
+      - obsoleted WebFetch::EGAuthors because eGroups changes their site too
+        often to keep up with (and has no direct news-export support)
       - added WebFetch::CNETnews, contributed by Jamie Heilman
       - updated WebFetch::CNNsearch to allow keyword-only searches.
         This became necessary when a Linux story got on all the

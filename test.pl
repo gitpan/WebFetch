@@ -8,9 +8,10 @@ BEGIN {
 	@modules = ( "WebFetch::CNETnews", "WebFetch::CNNsearch",
 		"WebFetch::COLA", "WebFetch::DebianNews",
 		"WebFetch::Freshmeat", "WebFetch::General",
+		"WebFetch::LinuxDevNet", "WebFetch::LinuxTelephony",
 		"WebFetch::LinuxToday", "WebFetch::ListSubs",
 		"WebFetch::SiteNews", "WebFetch::Slashdot",
-		"WebFetch::YahooBiz" );
+		"WebFetch::32BitsOnline", "WebFetch::YahooBiz" );
 
 	$| = 1; print "1..".($#modules+2)."\n"; }
 END {print "not ok 1\n" unless $loaded;}

@@ -13,19 +13,20 @@
 package WebFetch::Slashdot;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @Options $filtered_authors $segfault_mode $alt_url $alt_file );
+use vars qw(
+	$VERSION @ISA @EXPORT @Options $filtered_authors 
+	$segfault_mode $alt_url $alt_file $xml
+);
 
 use Exporter;
-use AutoLoader;
-use WebFetch;;
+use WebFetch;
 
-@ISA = qw(Exporter AutoLoader WebFetch);
+@ISA = qw(Exporter WebFetch);
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
-@EXPORT = qw( fetch_main
+@EXPORT = qw( fetch_main );
 
-);
 $filtered_authors = [];
 $segfault_mode = 0;
 $alt_url = undef;
@@ -41,8 +42,29 @@ $alt_file = undef;
 $WebFetch::Slashdot::filename = "slashdot.html";
 $WebFetch::Slashdot::num_links = 5;
 $WebFetch::Slashdot::url = "http://slashdot.org/ultramode.txt";
+$WebFetch::Slashdot::xml = 0;
 
 # no user-servicable parts beyond this point
+
+# XML
+my @parts    = ();
+my $in_story = 0;
+my @story    = ();
+my $parser   = '';
+
+if (!$segfault_mode and eval 'require XML::Parser') {
+
+	$parser = XML::Parser->new(
+		Handlers => {
+			Start => \&xml_handle_start,
+			End   => \&xml_handle_end,
+			Char  => \&xml_handle_char
+		},
+	);
+
+	$WebFetch::Slashdot::url = "http://slashdot.org/slashdot.xml";
+	$WebFetch::Slashdot::xml = 1;
+}
 
 # array indices
 sub entry_title { 0; }
@@ -81,8 +103,13 @@ sub fetch
 
 	# process the links
 	my $content = $self->get;
-	my @parts = split ( /%%\r{0,1}\n/, $$content );
-	shift @parts;	# discard intro text
+
+	if ($xml) {
+		$parser->parse($$content);
+	} else {
+		@parts = split ( /%%\r{0,1}\n/, $$content );
+		shift @parts;   # discard intro text
+	}
 
 	# stuff filtered-out authors into hash
 	my ( $part, @content_links, %filtered_out );
@@ -92,10 +119,19 @@ sub fetch
 
 	# split up the response into each of its subjects
 	foreach $part ( @parts ) {
-		my @subparts = split ( /\n/, $part );
-		( $filtered_out{$subparts[entry_author]}) and next;
-		push ( @content_links, [ @subparts ]);
+		my @subparts;
 
+		if ($xml) {
+			@subparts = @$part;
+		} else {
+			@subparts = split ( /\n/, $part );
+		}
+
+		(defined $subparts[&entry_author])
+			and (defined $filtered_out{$subparts[&entry_author]})
+			and $filtered_out{$subparts[&entry_author]}
+			and next;
+		push ( @content_links, [ @subparts ]);
 	}
 
 	# generate HTML
@@ -125,6 +161,27 @@ sub fetch
                                 ."\"storytype\" is the story type\n"
                                 ."\"imagename\" is the Slashdot image/icon" );
         }
+}
+
+sub xml_handle_start {
+	my ($p,$el) = @_;
+	$in_story = 1 if $el eq 'story';
+}
+
+sub xml_handle_end {
+	my ($p,$el) = @_;
+	$in_story = 0 if $el eq 'story';
+
+	if (!$in_story) {
+		push @parts, [ @story ];
+		@story = ();
+	}
+}
+
+sub xml_handle_char {
+	my ($p,$data) = @_;
+	return if $p->current_element =~ /^(?:story|backslash)$/;
+	push @story, $data;
 }
 
 1;
@@ -174,6 +231,10 @@ to retreive headlines from Segfault.org and save them in a
 C<segfault.html> file.
 This parameter should not be used at the same time as
 C<--alt_url> and C<--alt_file> because they will override it.
+
+If WebFetch::Slashdot can find XML::Parser in your Perl libraries,
+it will fetch Slashdot's XML version of its headlines.
+Otherwise it will fetch the plain text version.
 
 =head1 AUTHOR
 
