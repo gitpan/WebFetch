@@ -6,9 +6,9 @@ TODO
 Makefile.PL
 test.pl
 sub/Makefile.PL
+sub/CNETnews.pm
 sub/CNNsearch.pm
 sub/COLA.pm
-sub/EGAuthors.pm
 sub/Freshmeat.pm
 sub/General.pm
 sub/LinuxToday.pm
@@ -17,4 +17,5 @@ sub/PerlStruct.pm
 sub/SiteNews.pm
 sub/Slashdot.pm
 sub/YahooBiz.pm
+sub/OLD/EGAuthors.pm
 webfetch-pb.gif

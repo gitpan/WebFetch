@@ -144,11 +144,14 @@ sub fetch
 		push ( @short_links,
 			[ $short_news[$i]{text}, priority($short_news[$i]) ]);
 	}
+	if ( !defined $self->{style}) {
+		$self->{style} = {};
+	}
+	$self->{style}{para} = 1;
 	$self->html_gen( $short_path,
 		sub { return $_[&entry_text]
 			."\n<!--- priority ".$_[&entry_priority]." --->"; },
-		\@short_links,
-		{ "para" => 1 });
+		\@short_links );
 
 	# sort events for long display
 	my @long_news = sort for_long @news_items;

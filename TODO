@@ -7,6 +7,9 @@ $Revision: 1.4 $
   that's how it's been used.  But it isn't the only way to use it.)
 * add more fetch modules:
   * calendar/upcoming events
+  * XML downloads
+  * RDF downloads
+  * dmoz.org Open Directory Project RDF download
   * ARRL W1AW bulletins
   * California State OES bulletins
   * others as submitted by users

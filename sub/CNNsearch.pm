@@ -9,7 +9,8 @@
 package WebFetch::CNNsearch;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @Options $Usage $search_string $search_pagesize );
+use vars qw($VERSION @ISA @EXPORT @Options $Usage $search_string
+	$search_pagesize $use_keyword );
 
 use Exporter;
 use AutoLoader;
@@ -29,19 +30,23 @@ $search_pagesize = 20;
 
 @Options = (
 	"search:s" => \$search_string,
-	"pagesize:i" => \$search_pagesize);
-$Usage = "[--search search-string] [--pagesize search-page-size]";
+	"pagesize:i" => \$search_pagesize,
+	"use_keyword" => \$use_keyword,
+	);
+$Usage = "[--search search-string] [--pagesize search-page-size] "
+	."[--use_keyword]";
 
 # configuration parameters
 $WebFetch::CNNsearch::filename = "cnnsearch.html";
 $WebFetch::CNNsearch::num_links = 5;
-$WebFetch::CNNsearch::url = "http://search.cnn.com:8765/query.html";
+$WebFetch::CNNsearch::url = "http://search.cnn.com/query.html";
 
 # the search portion of the URL needs to be saved to run after
 # command-line processing
 $WebFetch::CNNsearch::search = sub {
-	"?rq=0&col=cnni&qt=linux&qc=&qm=0&st=1&nh=".$search_pagesize
-		."&lk=1&rf=1&go=go";
+	"?col=cnni&op0=%2B&fl0="
+		.((defined $use_keyword ) ? "keywords" : "" )
+		."%3A&ty0=p&tx0=$search_string&dt=in&inthe=2592000&nh=$search_pagesize&rf=1&lk=1&qp=&qt=&qs=&qc=&pw=460&qm=0&st=1&rq=0&ql=a";
 };
 
 # no user-servicable parts beyond this point
@@ -110,11 +115,27 @@ C<use WebFetch::CNNsearch;>
 From the command line:
 
 C<perl C<-w> -MWebFetch::CNNsearch C<-e> "&fetch_main" -- --dir I<directory>
-     --search I<search-string> --pagesize I<search-page-size>>
+     --search I<search-string> [--pagesize I<search-page-size>>]
+     [--use_keyword]
 
 =head1 DESCRIPTION
 
 This module gets the stories by searching CNN Interactive.
+
+The required I<--search> parameter specifies a string to search for
+in CNN's news.
+The optional I<--pagesize> parameter can be used to have the search engine
+return more entries per page if not enough are obtained for your use.
+
+The optional I<--use_keyword> parameter causes a search by keyword
+instead of by just any occurrence in the text.
+This parameter was added in WebFetch 0.07 because previous searches
+by body text only for "Linux" began to fail when a Linux story became
+listed in the "in other news" links on every page at CNN.
+Using a keyword-only search gets around this problem, returning only
+pages which have the string among their keywords.
+But this only works if the writers at CNN used the keyword you're
+interested in - do some searches either way to try it out first.
 
 After this runs, the file C<cnnsearch.html> will be created or replaced.
 If there already was an C<cnnsearch.html> file, it will be moved to

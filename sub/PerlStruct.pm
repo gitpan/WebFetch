@@ -111,7 +111,7 @@ __END__
 
 =head1 NAME
 
-WebFetch::PerlStruct - download and save headlines from other WebFetch sites
+WebFetch::PerlStruct - accepts a Perl structure with pre-parsed news
 
 =head1 SYNOPSIS
 

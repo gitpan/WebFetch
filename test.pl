@@ -19,10 +19,10 @@ print "ok 1\n";
 # of the test code):
 
 # module loading tests
-@modules = ( "WebFetch::CNNsearch","WebFetch::COLA",
-	"WebFetch::EGAuthors", "WebFetch::Freshmeat",
-	"WebFetch::General", "WebFetch::LinuxToday", "WebFetch::ListSubs",
-	"WebFetch::SiteNews", "WebFetch::Slashdot", "WebFetch::YahooBiz" );
+@modules = ( "WebFetch::CNETnews", "WebFetch::CNNsearch", "WebFetch::COLA",
+	"WebFetch::Freshmeat", "WebFetch::General", "WebFetch::LinuxToday",
+	"WebFetch::ListSubs", "WebFetch::SiteNews", "WebFetch::Slashdot",
+	"WebFetch::YahooBiz" );
 
 for ( $i=0; $i <= $#modules; $i++ ) {
 	if (( eval "require ".$modules[$i] ) and ! $@ ) {

@@ -12,5 +12,6 @@ WriteMakefile(
 	'Locale::Country' => 0,
 	'Date::Calc' => 0,
 	'Data::Dumper' => 0,
+	'HTML::LinkExtor' => 0,
 	},
 );

@@ -107,12 +107,17 @@ so huge.
 
 Do not run the crontab entries too often - be a good net.citizen and
 do your updates no more often than necessary.
-Popular sites need their uses to refrain from making automated
+Popular sites need their users to refrain from making automated
 requests too often because they add up on an enormous scale
 on the Internet.
 Some sites such as Freshmeat prefer no shorter than hourly intervals.
 Slashdot prefers no shorter than half-hourly intervals.
 When in doubt, ask the site maintainers what they prefer.
+
+(Then again, there are a very few sites like Yahoo and CNN who don't
+mind getting the extra hits if you're going to create links to them.
+Even so, more often than every 20 minutes would still be  excessive
+to the biggest web sites.)
 
 =head2 SETTING UP SERVER-SIDE INCLUDES
 
@@ -150,7 +155,7 @@ use Data::Dumper;
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw( );
-$VERSION = '0.06';
+$VERSION = '0.07';
 my $debug;
 
 # Preloaded methods go here.
@@ -312,6 +317,37 @@ This will be used in a B<font> tag so it may be any standard font name
 or a list.  For example, for a sans-serif font, use
 "C<Helvetica,Arial,sans-serif>".
 
+=item --style I<style-name-list>
+
+(optional) select from one or more of various HTML output styles for the
+generated HTML text.  If more than one style name is listed, they must
+be separated by commas (no spaces.)
+
+=over 4
+
+=item para
+
+use paragraph breaks between lines/links instead of unordered lists
+
+=item notable
+
+usually WebFetch modules generate HTML table-formatted output text but
+this option will disable the e of tables
+
+=item bullet
+
+use explicit bullet characters (HTML entity #149) and line breaks (br)
+to identify and separate each link
+
+=item ul
+
+(default) use an HTML unnumbered list (ul) block for the list of links
+
+=back
+
+The I<para>, I<bullet> and I<ul> styles are mutually exclusive.  Others
+may be specified at the same time.
+
 =item --quiet
 
 (optional) suppress printed warnings for HTTP errors
@@ -342,7 +378,8 @@ sub run
 	my ( $caller_pkg, $caller_file, $caller_line ) = caller;
 	my ( $obj, $dir, $group, $mode, $export, $ns_export, $quiet,
 		$url_prefix, $ns_site_title, $ns_site_link, $ns_site_desc,
-		$ns_image_title, $ns_image_url, $font_size, $font_face );
+		$ns_image_title, $ns_image_url, $font_size, $font_face,
+		$style, %style_hash );
 
 
 	my $result = GetOptions (
@@ -359,6 +396,7 @@ sub run
 		"url_prefix:s" => \$url_prefix,
 		"font_size:s" => \$font_size,
 		"font_face:s" => \$font_face,
+		"style:s" => \$style,
 		"quiet" => \$quiet,
 		"debug" => \$debug,
 		( eval "defined \@".$caller_pkg."::Options" )
@@ -379,6 +417,11 @@ sub run
 		exit 1;
 	}
 	$debug and print STDERR "WebFetch: entered run from $caller_pkg\n";
+	if ( defined $style ) {
+		foreach ( split ( /,/, $style )) {
+			$style_hash{$_} = 1;
+		}
+	}
 	$obj = eval 'new '.$caller_pkg.' (
 		"dir" => $dir,
 		(defined $group) ? ( "group" => $group ) : (),
@@ -394,6 +437,7 @@ sub run
 		(defined $url_prefix) ? ( "url_prefix" => $url_prefix ) : (),
 		(defined $font_size) ? ( "font_size" => $font_size ) : (),
 		(defined $font_face) ? ( "font_face" => $font_face ) : (),
+		(defined $style) ? ( "style" => \%style_hash ) : (),
 		(defined $quiet) ? ( "quiet" => $quiet ) : (),
 		)';
 	if ( $@ ) {
@@ -829,16 +873,12 @@ and a separate call to C<&$format_func>
 =item $style
 
 (optional) a hash reference with style parameter names/values
-that can modify the behavior of the funciton to use different HTML styles;
-recognized values are
-
-=over 4
-
-=item para
-
-use paragraph breaks between lines/links instead of unordered lists
-
-=back
+that can modify the behavior of the funciton to use different HTML styles.
+The recognized values are enumerated with WebFetch's I<--style> command line
+option.
+(When they reach this point, they are no longer a comma-delimited string -
+WebFetch or another module has parsed them into a hash with the style
+name as the key and the integer 1 for the value.)
 
 =back
 
@@ -871,32 +911,45 @@ columns
 # utility function to generate HTML output
 sub html_gen
 {
-        my ( $self, $filename, $format_func, $links, $style ) = @_;
+        my ( $self, $filename, $format_func, $links ) = @_;
  
         # generate summary HTML links
         my $link_count=0;
         my @result;
 	my $style_para = 0;
 	my $style_ul = 0;
-	if (( defined $style ) and ref($style) eq "HASH" ) {
-		$style_para = ( defined $style->{para} ) ? $style->{para} : 0;
+	my $style_bullet = 0;
+	my $style_notable = 0;
+	if (( defined $self->{style} ) and ref($self->{style}) eq "HASH" ) {
+		$style_para = ( defined $self->{style}{para} ) ? $self->{style}{para} : 0;
+		$style_notable = ( defined $self->{style}{notable} ) ? $self->{style}{notable} : 0;
+		$style_ul = ( defined $self->{style}{ul} ) ? $self->{style}{ul} : 0;
+		$style_bullet = ( defined $self->{style}{bullet} ) ? $self->{style}{bullet} : 0;
 	}
-	if ( ! $style_para ) {
-		$style_ul = 1;
+	if ( ! $style_para and !$style_ul and ! $style_bullet ) {
+		$style_bullet = 1;
 	}
 
-        push @result, "<center>";
-        push @result, "<table><tr><td>";
+	if ( ! $style_notable ) {
+		push @result, "<center>";
+		push @result, "<table><tr><td valign=top>";
+	}
+	if ( $style_ul ) {
+		push @result, "<ul>";
+	}
 	$self->font_start( \@result );
         if ( @$links >= 0 ) {
                 my $entry;
                 foreach $entry ( @$links ) {
-                        push @result, ( $style_ul ? "<li>" : "" )
+                        push @result,
+				( $style_ul ? "<li>" :
+				( $style_bullet ? "&#149;&nbsp;" : "" ))
 				.&$format_func(@$entry);
                         if ( ++$link_count >= $self->{num_links} ) {
                                 last;
                         }
 			if (( defined $self->{table_sections}) and
+				! $style_para and ! $style_notable and
 				$link_count == int(($self->{num_links}+1)
 				/ $self->{table_sections}))
 			{
@@ -905,7 +958,11 @@ sub html_gen
 				push @result, "<td width=45% valign=top>";
 				$self->font_start( \@result );
 			} else {
-				$style_para and push @result, "<p>";
+				if ( $style_para ) {
+					push @result, "<p>";
+				} elsif ( $style_bullet ) {
+					push @result, "<br>";
+				}
 			}
                 }
         } else {
@@ -914,8 +971,13 @@ sub html_gen
                         ."Please check again later.)</i>";
         }
 	$self->font_end( \@result );
-        push @result, "</td></tr></table>";
-        push @result, "</center>";
+	if ( $style_ul ) {
+		push @result, "</ul>";
+	}
+	if ( ! $style_notable ) {
+		push @result, "</td></tr></table>";
+		push @result, "</center>";
+	}
  
 	$self->html_savable( $filename, join("\n",@result)."\n");
 }
@@ -1271,9 +1333,9 @@ http://www.svlug.org/sw/webfetch/
 
 =for html
 <a href="http://www.perl.org/">perl</a>(1),
+<a href="WebFetch::CNETnews.html">WebFetch::CNETnews</a>,
 <a href="WebFetch::CNNsearch.html">WebFetch::CNNsearch</a>,
 <a href="WebFetch::COLA.html">WebFetch::COLA</a>,
-<a href="WebFetch::EGAuthors.html">WebFetch::EGAuthors</a>,
 <a href="WebFetch::Freshmeat.html">WebFetch::Freshmeat</a>,
 <a href="WebFetch::LinuxToday.html">WebFetch::LinuxToday</a>,
 <a href="WebFetch::ListSubs.html">WebFetch::ListSubs</a>,
@@ -1283,13 +1345,13 @@ http://www.svlug.org/sw/webfetch/
 <a href="WebFetch::YahooBiz.html">WebFetch::YahooBiz</a>.
 
 =for text
-perl(1), WebFetch::CNNsearch, WebFetch::COLA, WebFetch::EGAuthors,
+perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
 WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
 WebFetch::PerlStruct,
 WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
 
 =for man
-perl(1), WebFetch::CNNsearch, WebFetch::COLA, WebFetch::EGAuthors,
+perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
 WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
 WebFetch::PerlStruct,
 WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.

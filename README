@@ -63,12 +63,17 @@ INSTALLATION
 
     Do not run the crontab entries too often - be a good net.citizen
     and do your updates no more often than necessary. Popular sites
-    need their uses to refrain from making automated requests too
+    need their users to refrain from making automated requests too
     often because they add up on an enormous scale on the Internet.
     Some sites such as Freshmeat prefer no shorter than hourly
     intervals. Slashdot prefers no shorter than half-hourly
     intervals. When in doubt, ask the site maintainers what they
     prefer.
+
+    (Then again, there are a very few sites like Yahoo and CNN who
+    don't mind getting the extra hits if you're going to create
+    links to them. Even so, more often than every 20 minutes would
+    still be excessive to the biggest web sites.)
 
   SETTING UP SERVER-SIDE INCLUDES
 
@@ -142,6 +147,12 @@ WebFetch FUNCTIONS
 
 For more info see http://my.netscape.com/publish/
 
+            *Note that MyNetscape uses Reuters Distribution Format
+            (RDF) for its imports. So this format may be readable by
+            any other sites who can read data from Reuters. You
+            should use the ".rdf" suffix on file names that use this
+            format.*
+
     --ns_site_title *site-title*
             (required if --ns_export is used) For exporting to
             MyNetscape, this sets the name of your site. It cannot
@@ -190,6 +201,28 @@ For more info see http://my.netscape.com/publish/
             This will be used in a font tag so it may be any
             standard font name or a list. For example, for a sans-
             serif font, use "`Helvetica,Arial,sans-serif'".
+
+    --style *style-name-list*
+            (optional) select from one or more of various HTML
+            output styles for the generated HTML text. If more than
+            one style name is listed, they must be separated by
+            commas (no spaces.)
+
+        para    use paragraph breaks between lines/links instead of
+                unordered lists
+
+        notable usually WebFetch modules generate HTML table-formatted
+                output text but this option will disable the e of
+                tables
+
+        bullet  use explicit bullet characters (HTML entity #149) and
+                line breaks (br) to identify and separate each link
+
+        ul      (default) use an HTML unnumbered list (ul) block for the
+                list of links
+
+            The *para*, *bullet* and *ul* styles are mutually
+            exclusive. Others may be specified at the same time.
 
     --quiet (optional) suppress printed warnings for HTTP errors
             *(applies only to modules which use the WebFetch::get()
@@ -366,11 +399,12 @@ For more info see http://my.netscape.com/publish/
 
     $style  (optional) a hash reference with style parameter
             names/values that can modify the behavior of the
-            funciton to use different HTML styles; recognized values
-            are
-
-        para    use paragraph breaks between lines/links instead of
-                unordered lists
+            funciton to use different HTML styles. The recognized
+            values are enumerated with WebFetch's *--style* command
+            line option. (When they reach this point, they are no
+            longer a comma-delimited string - WebFetch or another
+            module has parsed them into a hash with the style name
+            as the key and the integer 1 for the value.)
 
         Upon entry to this function, `$obj' must contain the
         following attributes:
@@ -492,7 +526,7 @@ A current copy of the source code and documentation may be found at
 http://www.svlug.org/sw/webfetch/
 
 SEE ALSO
-perl(1), WebFetch::CNNsearch, WebFetch::COLA, WebFetch::EGAuthors,
+perl(1), WebFetch::CNETnews, WebFetch::CNNsearch, WebFetch::COLA,
 WebFetch::Freshmeat, WebFetch::LinuxToday, WebFetch::ListSubs,
 WebFetch::PerlStruct,
 WebFetch::SiteNews, WebFetch::Slashdot, WebFetch::YahooBiz.
