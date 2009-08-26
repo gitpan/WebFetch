@@ -1,5 +1,14 @@
 Revision history for the WebFetch modules for Perl5
 
+0.11
+      - converted the following modules to support Embedding API:
+      	DebianNews, General
+      - removed fetch_main function from the derived modules; WebFetch.pm now
+        handles this for all of them.  (This is a partial fix for a problem
+	with embedding more than one WebFetch module at a time, reported by
+	Joey Hess of the Debian Project.)
+      - fixed pod formatting problem in Embedding API docs
+
 0.10 Wed Sep 15 01:23:53 PDT 1999
       - added WebFetch Embedding API (added over 850 lines to WebFetch.pm)
       - XML::Parser added as a build-time dependency

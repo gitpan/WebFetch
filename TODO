@@ -1,5 +1,5 @@
 WebFetch To-Do List
-$Revision: 1.7 $
+$Revision: 1.2 $
 ------------------------------------------------------------------------------
 
 * Use the Perl5 "Resources" module to add a configuration infrastructure to
@@ -21,5 +21,6 @@ $Revision: 1.7 $
   * dmoz.org Open Directory Project RDF download [wanted for 1.0]
   * ARRL W1AW bulletins
   * California State OES bulletins
+  * watch for updates to any web page from a specified list
   * others as submitted by users
 

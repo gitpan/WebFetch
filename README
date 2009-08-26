@@ -14,6 +14,21 @@ DESCRIPTION
     version as a backup. This is expected to be used for
     periodically-updated information which is run as a cron job.
 
+PREREQUISITES
+    Before you begin the installation of WebFetch you need to confirm
+    that you have all of the following Perl modules installed:
+
+      Date-Calc
+      HTML-Tagset -- Required by HTML-Parser
+      HTML-Parser -- Required by libwww-perl
+      MIME-Base64 -- Required by libwww-perl
+      Digest-MD5 -- Required by libwww-perl
+      libnet -- Required by libwww-perl
+      URI -- Required by libwwwperl
+      libwww-perl
+      Locale-Codes
+      XML-Parser
+
 INSTALLATION
     After unpacking and the module sources from the tar file, run
 

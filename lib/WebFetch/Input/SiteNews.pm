@@ -1,52 +1,39 @@
 #
-# SiteNews.pm - get headlines from a site-local file
+# WebFetch::Input::SiteNews.pm - get headlines from a site-local file
 #
-# Copyright (c) 1998,1999 Ian Kluft. All rights reserved. This program is
-# free software; you can redistribute it and/or modify it under the
-# same terms as Perl itself.
-#
+# Copyright (c) 1998-2009 Ian Kluft. This program is free software; you can
+# redistribute it and/or modify it under the terms of the GNU General Public
+# License Version 3. See  http://www.webfetch.org/GPLv3.txt
 
-package WebFetch::SiteNews;
+package WebFetch::Input::SiteNews;
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @Options $Usage @input $short_path $long_path $cat_priorities @month_name $now $nowstamp $ns_exp_file );
+use base "WebFetch";
 
-use Exporter;
-use AutoLoader;
 use Carp;
-use WebFetch;;
 use Date::Calc qw(Today Delta_Days Month_to_Text);
 
-@ISA = qw(Exporter AutoLoader WebFetch);
-# Items to export into callers namespace by default. Note: do not export
-# names by default without a very good reason. Use EXPORT_OK instead.
-# Do not simply export all your public functions/methods/constants.
-@EXPORT = qw( fetch_main
-
-);
-
 # set defaults
-$short_path = undef;
-$long_path = undef;
-$ns_exp_file = undef;
+our ( $cat_priorities, $now, $nowstamp );
 
-@Options = (
-	"input=s@" => \@input,
-	"short=s" => \$short_path,
-	"long=s" => \$long_path);
-$Usage = "--input news-file --short short-output-file --long long-output-file";
+our @Options = (
+	"short=s",
+	"long=s",
+);
+our $Usage = "--short short-output-file --long long-output-file";
 
 # configuration parameters
-$WebFetch::SiteNews::num_links = 5;
+our $num_links = 5;
 
 # no user-servicable parts beyond this point
+
+# register capabilities with WebFetch
+__PACKAGE__->module_register( "cmdline", "input:sitenews" );
 
 # constants for state names
 sub initial_state { 0; }
 sub attr_state { 1; }
 sub text_state { 2; }
-
-sub fetch_main { WebFetch::run(); }
 
 sub fetch
 {
@@ -54,7 +41,7 @@ sub fetch
 
 	# set parameters for WebFetch routines
 	if ( !defined $self->{num_links}) {
-		$self->{num_links} = $WebFetch::SiteNews::num_links;
+		$self->{num_links} = $WebFetch::Input::SiteNews::num_links;
 	}
 	if ( !defined $self->{style}) {
 		$self->{style} = {};
@@ -83,13 +70,15 @@ sub fetch
 	$nowstamp = sprintf "%04d%02d%02d", @$now;
 
 	# parse data file
-	my $input;
-	foreach $input ( @input ) {
-		$self->parse_input( $input );
+	my $source;
+	if (( exists $self->{sources}) and ( ref $self->{sources} eq "ARRAY" )) {
+		foreach $source ( @{$self->{sources}}) {
+			$self->parse_input( $source );
+		}
 	}
 
 	# set parameters for the short news format
-	if ( defined $short_path ) {
+	if ( defined $self->{short_path} ) {
 		# create the HTML actions list
 		$self->{actions}{html} = [];
 
@@ -134,18 +123,18 @@ sub fetch
 		};
 
 		# put parameters for fmt_handler_html() on the html list
-		push @{$self->{actions}{html}}, [ $short_path, $params ];
+		push @{$self->{actions}{html}}, [ $self->{short_path}, $params ];
 	}
 
 	# set parameters for the long news format
-	if ( defined $long_path ) {
+	if ( defined $self->{long_path} ) {
 		# create the SiteNews-specific action list
-		# It will use WebFetch::SiteNews::fmt_handler_sitenews_long()
+		# It will use WebFetch::Input::SiteNews::fmt_handler_sitenews_long()
 		# which is defined in this file
 		$self->{actions}{sitenews_long} = [];
 
 		# put parameters for fmt_handler_sitenews_long() on the list
-		push @{$self->{actions}{sitenews_long}}, [ $long_path ];
+		push @{$self->{actions}{sitenews_long}}, [ $self->{long_path} ];
 	}
 }
 
@@ -311,7 +300,7 @@ sub fmt_handler_sitenews_long
 	push @long_text, "</dl>";
 
 	# store it for later save to disk
-	$self->html_savable( $long_path, join("\n",@long_text)."\n" );
+	$self->html_savable( $self->{long_path}, join("\n",@long_text)."\n" );
 }
 
 #---------------------------------------------------------------------------
@@ -353,8 +342,9 @@ sub priority
 	if (( defined $entry->{category}) and
 		( defined $cat_priorities->{$entry->{category}}))
 	{
-		return $cat_priorities->{$entry->{category}} + $age * 0.025
-			+ $bonus;
+		my $cat_pri = ( exists $cat_priorities->{$entry->{category}})
+			? $cat_priorities->{$entry->{category}} : 0;
+		return $cat_pri + $age * 0.025 + $bonus;
 	} else {
 		return $cat_priorities->{"default"} + $age * 0.025
 			+ $bonus;
@@ -369,27 +359,27 @@ __END__
 
 =head1 NAME
 
-WebFetch::SiteNews - download and save SiteNews headlines
+WebFetch::Input::SiteNews - download and save SiteNews headlines
 
 =head1 SYNOPSIS
 
 In perl scripts:
 
-C<use WebFetch::SiteNews;>
+C<use WebFetch::Input::SiteNews;>
 
 From the command line:
 
-C<perl -w -MWebFetch::SiteNews -e "&fetch_main" -- --dir directory
-     --input news-file --short short-form-output-file
+C<perl -w -MWebFetch::Input::SiteNews -e "&fetch_main" -- --dir directory
+     --source news-file --short short-form-output-file
      --long long-form-output-file>
 
 =head1 DESCRIPTION
 
 This module gets the current headlines from a site-local file.
 
-The I<--input> parameter specifies a file name which contains news to be
+The I<--source> parameter specifies a file name which contains news to be
 posted.  See L<"FILE FORMAT"> below for details on contents to put in the
-file.  I<--input> may be specified more than once, allowing a single news
+file.  I<--source> may be specified more than once, allowing a single news
 output to come from more than one input.  For example, one file could be
 manually maintained in CVS or RCS and another could be entered from a
 web form.
@@ -400,7 +390,7 @@ C<Osite_news.html>.
 
 =head1 FILE FORMAT
 
-The WebFetch::SiteNews data format is used to set up news for the
+The WebFetch::Input::SiteNews data format is used to set up news for the
 local web site and allow other sites to import it via WebFetch.
 The file is plain text containing comments and the news items.
 
@@ -408,14 +398,12 @@ There are three forms of outputs generated from these news files.
 
 The I<"short news" output> is a small number (5 by default)
 of HTML text and links used for display in a small news window.
-And example of this can be seen in the "SVLUG News" box on SVLUG's
-home page.  This list takes into account expiration dates and
+This list takes into account expiration dates and
 priorities to pick which news entries are displayed and in what order.
 
 The I<"long news" output> lists all the news entries chronologically.
 It does not take expiration or priority into account.
 It is intended for a comprehensive site news list.
-An example can be found on SVLUG's news page.
 
 The I<export modes> make news items available in formats other web sites
 can retrieve to post news about your site.  They are chronological
@@ -437,14 +425,6 @@ whitespace-delimited list of news category names in order from highest
 to lowest priority.
 These priority names are used by the news item attributes and
 then for sorting "short news" list items.
-
-=item url-prefix
-
-A global parameter line beginning with "url-prefix:" will override the
---url_prefix command line parameter with a
-URL prefix to use when exporting news items via the WebFetch Export
-format (see --export)
-or by MyNetscape's RDF export format (via --ns_export).
 
 =back
 
@@ -503,7 +483,6 @@ dropping a whole priority level every 40 days.
 =head1 AUTHOR
 
 WebFetch was written by Ian Kluft
-for the Silicon Valley Linux User Group (SVLUG).
 Send patches, bug reports, suggestions and questions to
 C<maint@webfetch.org>.
 

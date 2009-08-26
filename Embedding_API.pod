@@ -1,4 +1,8 @@
-=head1 WebFetch Embedding API
+=head1 NAME
+
+WebFetch Embedding API - how to embed WebFetch into other programs
+
+=head1 DESCRIPTION
 
 As of version 0.10 of WebFetch, the Embedding API
 (application programming interface)
@@ -14,7 +18,7 @@ packaging WebFetch as Perl5 modules instead of scripts.
 Instead of just saving the information to files,
 now it's available within a program too.
 
-=head1 Conversion of WebFetch 0.09 Modules to the Embedding API
+=head2 Conversion of WebFetch 0.09 Modules to the Embedding API
 
 Old WebFetch 0.09 and earlier modules continue to work in what is called
 "0.09 compatibility mode".  Actually, the old strucutres are still there
@@ -23,6 +27,9 @@ by the presence of new variables which contain more information.
 
 The following modules were converted to the new API in WebFetch 0.10:
 I<CNETnews, CNNsearch, COLA, Freshmeat, SiteNews, and Slashdot>.
+
+The following modules were converted to the new API in WebFetch 0.11:
+I<DebianNews General>.
 
 The remaining modules have not been converted yet and operate in
 0.09 compatibility mode:
@@ -34,7 +41,7 @@ which are not (yet) distributed with WebFetch
 should also continue to work unmodified.
 If they don't, that would be a bug and should be reported.
 
-=head1 How the Embedding API Works
+=head2 How the Embedding API Works
 
 In WebFetch 0.09 and earlier, each module was responsible for saving its
 own information to a file, for all file formats that they supported.
