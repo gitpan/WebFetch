@@ -23,6 +23,11 @@ use Exception::Class (
 
 );
 
+=head1 NAME
+
+WebFetch::Output::TT - save data via the Perl Template Toolkit
+
+=cut
 
 # set defaults
 
@@ -33,6 +38,29 @@ our $Usage = "--template template-file [--tt_include include-path]";
 
 # register capabilities with WebFetch
 __PACKAGE__->module_register( "cmdline", "output:tt" );
+
+=head1 SYNOPSIS
+
+In perl scripts:
+
+C<use WebFetch::Output::TT;>
+
+From the command line:
+
+C<perl -w -MWebFetch::Output::TT -e "&fetch_main" --
+     [...WebFetch input options...] --dir directory
+     --dest_format tt --dest dest-path --template tt-file >
+
+=head1 DESCRIPTION
+
+This module saves output via the Perl Template Toolkit.
+
+=item $obj->fmt_handler_tt( $filename )
+
+This function formats the data according to the Perl Template Toolkit
+template provided in the --template parameter.
+
+=cut
 
 # Perl Template Toolkit format handler
 sub fmt_handler_tt
@@ -52,10 +80,9 @@ sub fmt_handler_tt
         my $template = Template->new( \%tt_config );
 
         # process template
-        my $result = $template->process( $self->{template}, $self->{data},
-		\$output );
-
-        $result or throw_template ( $template->error());
+        $template->process( $self->{template}, { data => $self->{data}},
+		\$output, { binmode => ':utf8'} )
+		or throw_template $template->error();
 
 	$self->raw_savable( $filename, $output );
 	1;
@@ -64,27 +91,6 @@ sub fmt_handler_tt
 1;
 __END__
 # POD docs follow
-
-=head1 NAME
-
-WebFetch::Output::TT - save data via the Perl Template Toolkit
-
-=head1 SYNOPSIS
-
-In perl scripts:
-
-C<use WebFetch::Output::TT;>
-
-From the command line:
-
-C<perl -w -MWebFetch::Output::TT -e "&fetch_main" -- --dir directory
-     --dest_format tt --dest dest-path [...WebFetch output options...]>
-
-=head1 DESCRIPTION
-
-This module saves output via the Perl Template Toolkit.
-
-TODO: add description
 
 =head1 AUTHOR
 
@@ -95,12 +101,13 @@ C<maint@webfetch.org>.
 =head1 SEE ALSO
 
 =for html
-<a href="WebFetch.html">WebFetch</a>
+<a href="WebFetch.html">WebFetch</a>,
+<a href="http://www.template-toolkit.org/>Perl Template Toolkit</a>
 
 =for text
-WebFetch
+WebFetch, Perl Template Toolkit
 
 =for man
-WebFetch
+WebFetch, Perl Template Toolkit
 
 =cut

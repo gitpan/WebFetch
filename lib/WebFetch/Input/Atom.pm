@@ -19,11 +19,55 @@ use LWP::UserAgent;
 use Exception::Class (
 );
 
+=head1 NAME
+
+WebFetch::Input::Atom - WebFetch input from Atom feeds
+
+=head1 SYNOPSIS
+
+This is an input module for WebFetch which accesses an Atom feed.
+The --source parameter contains the URL of the feed.
+
+From the command line:
+
+C<perl -w -MWebFetch::Input::Atom -e "&fetch_main" -- --dir directory
+     --source atom-feed-url [...WebFetch output options...]>
+
+In perl scripts:
+
+    use WebFetch::Input::Atom;
+
+    my $obj = WebFetch->new(
+        "dir" => "/path/to/fetch/workspace",
+	"source" => "http://search.twitter.com/search.atom?q=%23twiki",
+	"source_format" => "atom",
+	"dest" => "dump",
+	"dest_format" = "/path/to/dump/file",
+    );
+    $obj->do_actions; # process output
+    $obj->save; # save results
+
+
+=head1 DESCRIPTION
+
+This module gets the current headlines from a site-local file.
+
+The I<--input> parameter specifies a file name which contains news to be
+posted.  See L<"FILE FORMAT"> below for details on contents to put in the
+file.  I<--input> may be specified more than once, allowing a single news
+output to come from more than one input.  For example, one file could be
+manually maintained in CVS or RCS and another could be entered from a
+web form.
+
+After this runs, the file C<site_news.html> will be created or replaced.
+If there already was a C<site_news.html> file, it will be moved to
+C<Osite_news.html>.
+
+=cut
+
+
 our @Options = ();
 our $Usage = "";
-
-# configuration parameters
-our $num_links = 5;
 
 # no user-servicable parts beyond this point
 
@@ -35,29 +79,17 @@ sub fetch
 {
 	my ( $self ) = @_;
 
-	# set parameters for WebFetch routines
-	if ( !defined $self->{num_links}) {
-		$self->{num_links} = $WebFetch::Input::Atom::num_links;
-	}
-	if ( !defined $self->{style}) {
-		$self->{style} = {};
-		$self->{style}{para} = 1;
-	}
-
 	# set up Webfetch Embedding API data
-	$self->{data} = {}; 
-	$self->{data}{fields} = [ "id", "updated", "title", "author", "link",
-		"summary", "content", "xml" ];
+	$self->data->add_fields( "id", "updated", "title", "author", "link",
+		"summary", "content", "xml" );
 	# defined which fields match to which "well-known field names"
-	$self->{data}{wk_names} = {
+	$self->data->add_wk_names(
+		"id" => "id",
 		"title" => "title",
 		"url" => "link",
 		"date" => "updated",
 		"summary" => "summary",
-	};
-	$self->{data}{records} = [];
-
-	# process the links
+	);
 
 	# parse data file
 	$self->parse_input();
@@ -101,51 +133,21 @@ sub parse_input
 		# save the data record
 		my $id = extract_value( $entry->id() );
 		my $title = extract_value( $entry->title() );
-		my $author = extract_value( $entry->author->name );
+		my $author = ( defined $entry->author )
+			? extract_value( $entry->author->name ) : "";
 		my $link = extract_value( $entry->link->href );
 		my $updated = extract_value( $entry->updated() );
 		my $summary = extract_value( $entry->summary() );
 		my $content = extract_value( $entry->content() );
 		my $xml = $entry->as_xml();
-		push @{$self->{data}{records}},
-			[ $id, $updated, $title, $author, $link, $summary,
-				$content, $xml ];
+		$self->data->add_record( $id, $updated, $title,
+			$author, $link, $summary, $content, $xml );
 	}
 }
 
 1;
 __END__
 # POD docs follow
-
-=head1 NAME
-
-WebFetch::Input::Atom - download and save an Atom feed
-
-=head1 SYNOPSIS
-
-In perl scripts:
-
-C<use WebFetch::Input::Atom;>
-
-From the command line:
-
-C<perl -w -MWebFetch::Input::Atom -e "&fetch_main" -- --dir directory
-     --source atom-feed-url [...WebFetch output options...]>
-
-=head1 DESCRIPTION
-
-This module gets the current headlines from a site-local file.
-
-The I<--input> parameter specifies a file name which contains news to be
-posted.  See L<"FILE FORMAT"> below for details on contents to put in the
-file.  I<--input> may be specified more than once, allowing a single news
-output to come from more than one input.  For example, one file could be
-manually maintained in CVS or RCS and another could be entered from a
-web form.
-
-After this runs, the file C<site_news.html> will be created or replaced.
-If there already was a C<site_news.html> file, it will be moved to
-C<Osite_news.html>.
 
 =head1 Atom FORMAT
 

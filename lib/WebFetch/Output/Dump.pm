@@ -20,6 +20,11 @@ use Data::Dumper;
 use Exception::Class (
 );
 
+=head1 NAME
+
+WebFetch::Output::Dump - save data in a Perl structure dump
+
+=cut
 
 # set defaults
 our ( @url, $cat_priorities, $now, $nowstamp );
@@ -35,23 +40,6 @@ our $num_links = 5;
 # register capabilities with WebFetch
 __PACKAGE__->module_register( "output:dump" );
 
-# Perl structure dump format handler
-sub fmt_handler_dump
-{
-	my ( $self, $filename ) = @_;
-
-	$self->raw_savable( $filename, Dumper( $self->{data}));
-	1;
-}
-
-1;
-__END__
-# POD docs follow
-
-=head1 NAME
-
-WebFetch::Output::Dump - save data in a Perl structure dump
-
 =head1 SYNOPSIS
 
 In perl scripts:
@@ -65,9 +53,29 @@ C<perl -w -MWebFetch::Output::Dump -e "&fetch_main" -- --dir directory
 
 =head1 DESCRIPTION
 
-This module gets the current news headlines from a site-local file.
+This is an output module for WebFetch which simply outputs a Perl
+structure dump from C<Data::Dumper>.  It can be read again by a Perl
+script using C<eval>.
 
-TODO: add description
+=item $obj->fmt_handler_dump( $filename )
+
+This function dumps the data into a string for saving by the WebFetch::save()
+function.
+
+=cut
+
+# Perl structure dump format handler
+sub fmt_handler_dump
+{
+	my ( $self, $filename ) = @_;
+
+	$self->raw_savable( $filename, Dumper( $self->{data}));
+	1;
+}
+
+1;
+__END__
+# POD docs follow
 
 =head1 AUTHOR
 

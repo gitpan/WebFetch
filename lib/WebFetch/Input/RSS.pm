@@ -19,46 +19,51 @@ use LWP::UserAgent;
 use Exception::Class (
 );
 
+=head1 NAME
+
+WebFetch::Input::RSS - download and save an RSS feed
+
+=cut
+
 our @Options = ();
 our $Usage = "";
 
 # configuration parameters
-our $num_links = 5;
 
 # no user-servicable parts beyond this point
 
 # register capabilities with WebFetch
 __PACKAGE__->module_register( "input:rss" );
 
+=head1 SYNOPSIS
+
+In perl scripts:
+
+C<use WebFetch::Input::RSS;>
+
+From the command line:
+
+C<perl -w -MWebFetch::Input::RSS -e "&fetch_main" -- --dir directory
+     --source rss-feed-url [...WebFetch output options...]>
+
+=cut
+
 # called from WebFetch main routine
 sub fetch
 {
 	my ( $self ) = @_;
 
-	# set parameters for WebFetch routines
-	if ( !defined $self->{num_links}) {
-		$self->{num_links} = $WebFetch::Input::RSS::num_links;
-	}
-	if ( !defined $self->{style}) {
-		$self->{style} = {};
-		$self->{style}{para} = 1;
-	}
-
 	# set up Webfetch Embedding API data
-	$self->{data} = {}; 
-	$self->{data}{fields} = [ "pubDate", "title", "link", "category",
-		"description" ];
+	$self->data->add_fields( "pubDate", "title", "link", "category",
+		"description" );
 	# defined which fields match to which "well-known field names"
-	$self->{data}{wk_names} = {
+	$self->data->add_wk_names(
 		"title" => "title",
 		"url" => "link",
 		"date" => "pubDate",
 		"summary" => "description",
 		"category" => "category",
-	};
-	$self->{data}{records} = [];
-
-	# process the links
+	);
 
 	# parse data file
 	$self->parse_input();
@@ -156,47 +161,15 @@ sub parse_input
 			? $item->{category} : "";
 		my $description = ( defined $item->{description})
 			? $item->{description} : "";
-		push @{$self->{data}{records}},
-			[ $pub_date, $title, $link, $category, $description ];
+		$self->data->add_record( $pub_date, $title, $link,
+			$category, $description );
 		$pos++;
 	}
 }
 
-#---------------------------------------------------------------------------
-
-#
-# utility functions
-#
-
-# generate a printable version of the datestamp
-sub printstamp
-{
-	my ( $stamp ) = @_;
-	my ( $year, $mon, $day ) = ( $stamp =~ /^(....)(..)(..)/ );
-
-	return Month_to_Text(int($mon))." ".int($day).", $year";
-}
-
-#---------------------------------------------------------------------------
-
 1;
 __END__
 # POD docs follow
-
-=head1 NAME
-
-WebFetch::Input::RSS - download and save an RSS feed
-
-=head1 SYNOPSIS
-
-In perl scripts:
-
-C<use WebFetch::Input::RSS;>
-
-From the command line:
-
-C<perl -w -MWebFetch::Input::RSS -e "&fetch_main" -- --dir directory
-     --source rss-feed-url [...WebFetch output options...]>
 
 =head1 DESCRIPTION
 

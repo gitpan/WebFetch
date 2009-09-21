@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                WebFetch
-version:             0.12
+version:             0.13
 abstract:            Perl module to download and save information from the Web
 license:             perl
 author:              

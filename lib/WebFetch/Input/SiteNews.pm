@@ -13,6 +13,12 @@ use base "WebFetch";
 use Carp;
 use Date::Calc qw(Today Delta_Days Month_to_Text);
 
+=head1 NAME
+
+WebFetch::Input::SiteNews - download and save SiteNews headlines
+
+=cut
+
 # set defaults
 our ( $cat_priorities, $now, $nowstamp );
 
@@ -29,6 +35,35 @@ our $num_links = 5;
 
 # register capabilities with WebFetch
 __PACKAGE__->module_register( "cmdline", "input:sitenews" );
+
+=head1 SYNOPSIS
+
+In perl scripts:
+
+C<use WebFetch::Input::SiteNews;>
+
+From the command line:
+
+C<perl -w -MWebFetch::Input::SiteNews -e "&fetch_main" -- --dir directory
+     --source news-file --short short-form-output-file
+     --long long-form-output-file>
+
+=head1 DESCRIPTION
+
+This module gets the current headlines from a site-local file.
+
+The I<--source> parameter specifies a file name which contains news to be
+posted.  See L<"FILE FORMAT"> below for details on contents to put in the
+file.  I<--source> may be specified more than once, allowing a single news
+output to come from more than one input.  For example, one file could be
+manually maintained in CVS or RCS and another could be entered from a
+web form.
+
+After this runs, the file C<site_news.html> will be created or replaced.
+If there already was a C<site_news.html> file, it will be moved to
+C<Osite_news.html>.
+
+=cut
 
 # constants for state names
 sub initial_state { 0; }
@@ -49,19 +84,17 @@ sub fetch
 	}
 
 	# set up Webfetch Embedding API data
-	$self->{data} = {}; 
 	$self->{actions} = {}; 
-	$self->{data}{fields} = [ "date", "title", "priority", "expired",
-		"position", "label", "url", "category", "text" ];
+	$self->data->add_fields( "date", "title", "priority", "expired",
+		"position", "label", "url", "category", "text" );
 	# defined which fields match to which "well-known field names"
-	$self->{data}{wk_names} = {
+	$self->data->add_wk_names(
 		"title" => "title",
 		"url" => "url",
 		"date" => "date",
 		"summary" => "text",
 		"category" => "category"
-	};
-	$self->{data}{records} = [];
+	);
 
 	# process the links
 
@@ -228,82 +261,13 @@ sub parse_input
 		my $text = ( defined $item->{text}) ? $item->{text} : "";
 		my $url_prefix = ( defined $self->{url_prefix})
 			? $self->{url_prefix} : "";
-		push @{$self->{data}{records}},
-			[ printstamp($posted), $title, priority( $item ),
+		$self->data->add_record(
+			printstamp($posted), $title, priority( $item ),
 				expired( $item ), $pos, $label,
-				$url_prefix."#".$label, $category, $text ];
+				$url_prefix."#".$label, $category, $text );
 		$pos++;
 	}
 }
-
-# format handler function specific to this module's long-news output format
-sub fmt_handler_sitenews_long
-{
-	my ( $self, $filename ) = @_;
-
-	# sort events for long display
-	my @long_news = sort {
-		# sort news entries for long display
-		# sorting priority:
-		#	date first
-		#	category/priority second
-		#	reverse file order last	
-
-		# sort by date
-		my $lbl_fnum = $self->fname2fnum("label");
-		my ( $a_date, $b_date) = ( $a->[$lbl_fnum], $b->[$lbl_fnum]);
-		$a_date =~ s/-.*//;
-		$b_date =~ s/-.*//;
-		if ( $a_date ne $b_date ) {
-			return $b_date cmp $a_date;
-		}
-
-		# sort by priority (within same date)
-		my $pri_fnum = $self->fname2fnum("priority");
-		if ( $a->[$pri_fnum] != $b->[$pri_fnum] ) {
-			return $a->[$pri_fnum] <=> $b->[$pri_fnum];
-		}
-
-		# sort by chronological order (within same date and priority)
-		return $a->[$lbl_fnum] cmp $b->[$lbl_fnum];
-	} @{$self->{data}{records}};
-
-	# process the links for the long list
-	my ( @long_text, $prev, $url_prefix, $i );
-	$url_prefix = ( defined $self->{url_prefix})
-		? $self->{url_prefix}
-		: "";
-	$prev=undef;
-	push @long_text, "<dl>";
-	my $lbl_fnum = $self->fname2fnum("label");
-	my $date_fnum = $self->fname2fnum("date");
-	my $title_fnum = $self->fname2fnum("title");
-	my $txt_fnum = $self->fname2fnum("text");
-	my $exp_fnum = $self->fname2fnum("expired");
-	my $pri_fnum = $self->fname2fnum("priority");
-	for ( $i = 0; $i <= $#long_news; $i++ ) {
-		my $news = $long_news[$i];
-		if (( ! defined $prev->[$date_fnum]) or
-			$prev->[$date_fnum] ne $news->[$date_fnum])
-		{
-			push @long_text, "<dt>".$news->[$date_fnum];
-			push @long_text, "<dd>";
-		}
-		push @long_text, "<a name=\"".$news->[$lbl_fnum]."\">"
-			.$news->[$txt_fnum]."</a>\n"
-			."<!--- priority: ".$news->[$pri_fnum]
-			.($news->[$exp_fnum] ? " expired" : "")
-			." --->";
-		push @long_text, "<p>";
-		$prev = $news;
-	}
-	push @long_text, "</dl>";
-
-	# store it for later save to disk
-	$self->html_savable( $self->{long_path}, join("\n",@long_text)."\n" );
-}
-
-#---------------------------------------------------------------------------
 
 #
 # utility functions
@@ -351,42 +315,9 @@ sub priority
 	}
 }
 
-#---------------------------------------------------------------------------
-
 1;
 __END__
 # POD docs follow
-
-=head1 NAME
-
-WebFetch::Input::SiteNews - download and save SiteNews headlines
-
-=head1 SYNOPSIS
-
-In perl scripts:
-
-C<use WebFetch::Input::SiteNews;>
-
-From the command line:
-
-C<perl -w -MWebFetch::Input::SiteNews -e "&fetch_main" -- --dir directory
-     --source news-file --short short-form-output-file
-     --long long-form-output-file>
-
-=head1 DESCRIPTION
-
-This module gets the current headlines from a site-local file.
-
-The I<--source> parameter specifies a file name which contains news to be
-posted.  See L<"FILE FORMAT"> below for details on contents to put in the
-file.  I<--source> may be specified more than once, allowing a single news
-output to come from more than one input.  For example, one file could be
-manually maintained in CVS or RCS and another could be entered from a
-web form.
-
-After this runs, the file C<site_news.html> will be created or replaced.
-If there already was a C<site_news.html> file, it will be moved to
-C<Osite_news.html>.
 
 =head1 FILE FORMAT
 

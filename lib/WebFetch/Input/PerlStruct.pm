@@ -1,4 +1,3 @@
-#
 # WebFetch::Input::PerlStruct.pm
 # push a Perl structure with pre-parsed news into WebFetch
 #
@@ -11,15 +10,26 @@ package WebFetch::Input::PerlStruct;
 use strict;
 use base "WebFetch";
 
-use Carp;
+# define exceptions/errors
+use Exception::Class (
+	"WebFetch::Input::PerlStruct::Exception::NoStruct" => {
+		isa => "WebFetch::Exception",
+		alias => "throw_nostruct",
+		description => "no 'content' structure was provided",
+	},
 
-our $format;
-our @Options = ( "format:s" );
+	"WebFetch::Input::PerlStruct::Exception::BadStruct" => {
+		isa => "WebFetch::Exception",
+		alias => "throw_badstruct",
+		description => "content of 'content' was not recognizable",
+	},
+
+);
+
+our @Options = ( );
 our $Usage = "";
 
 # configuration parameters
-our $num_links = 5;
-our $default_format = "<a href=\"%url%\">%title%</a>";
 
 # no user-servicable parts beyond this point
 
@@ -30,39 +40,26 @@ sub fetch
 {
 	my ( $self ) = @_;
 
-	# set parameters for WebFetch routines
-	$self->{num_links} = $WebFetch::Input::PerlStruct::num_links;
-	if ( defined $format ) {
-		$self->{"format"} = $format;
-	} else {
-		$self->{"format"} = $WebFetch::Input::PerlStruct::default_format;
-	}
-
 	# get the content from the provided perl structure
 	if ( !defined $self->{content}) {
-		croak "WebFetch::Input::PerlStruct: content struct does not exist\n";
+		throw_nostruct "content struct does not exist";
 	}
-	if ( ref($self->{content}) != "ARRAY" ) {
-		croak "WebFetch::Input::PerlStruct: content is not an ARRAY ref\n";
-	}
-
-	# collate $self->{content} into @content_links by fields from format
-	my ( @content_links, $part );
-	my @fields = ( $self->{"format"} =~ /%([^%]*)%/go );
-	foreach $part ( @{$self->{content}} ) {
-		my ( $fname, $subparts );
-		$subparts= [];
-		foreach $fname ( @fields ) {
-			push @$subparts, "".((defined $part->{$fname})
-				? $part->{$fname} : "" );
+	if ( ref($self->{content})->isa( "WebFetch::Data::Store" )) {
+		$self->{data} = $self->{content};
+		return;
+	} elsif ( ref($self->{content}) eq "HASH" ) {
+		if (( exists $self->{content}{fields})
+			and ( exists $self->{content}{records})
+			and ( exists $self->{content}{wk_names}))
+		{
+			$self->data->{fields} = $self->{content}{fields};
+			$self->data->{wk_names} = $self->{content}{wk_names};
+			$self->data->{records} = $self->{content}{records};
+			return;
 		}
-		push ( @content_links, $subparts );
 	}
-
-	# build data structure
-	$self->{data} = {};
+	throw_badstruct "content should be a WebFetch::Data::Store";
 }
-
 
 1;
 __END__
@@ -81,11 +78,8 @@ C<use WebFetch::Input::PerlStruct;>
 C<$obj = new WebFetch::Input::PerlStruct (
 	"content" => content_struct,
 	"dir" => output_dir,
-	"file" => output_file,
-	[ "format" => format_string, ]
-	[ "export" => wf_export_filename, ]
-	[ "font_size" => font_size, ]
-	[ "font_face" => font_face, ]
+	"dest" => output_file,
+	"dest_format" => output_format,	# used to select WebFetch output module
 	[ "group" => file_group_id, ]
 	[ "mode" => file_mode_perms, ]
 	[ "quiet" => 1 ]);>
@@ -116,55 +110,26 @@ See the WebFetch module documentation for details.
 
 =head1 THE CONTENT STRUCTURE
 
-The $content_struct parameter must be a reference to an array of hashes.
+The $content_struct parameter may be in either of two formats.
+
+If $content_struct is a hash reference containing entries called
+"fields", "wk_names" and "records", then it is assumed to be already
+in the format of the "data" element of the WebFetch Embedding API.
+
+Otherwise, it must be a reference to an array of hashes.
 Each of the hashes represents a separate news item,
 in the order they should be displayed.
-The fields of each has entry must provide enough information to
-match field names in all the the output formats you're using.
-Output formats include the following:
 
-=over 4
-
-=item HTML output file
-
-All the fields used in the $format_string (see below) must be present
-for generation of the HTML output.
-
-=item WebFetch export
-
-The $format_string also determines the fields that will be used
-for WebFetch export.
-Note that the WebFetch::General module expects by default to find
-fields called "url" and "title".
-So if you use something different from the default,
-you must provide your format string in the instructions
-for sites that fetch news from you.
-(Otherwise their WebFetch::General won't be looking for the fields
-you're providing.)
-
-=item MyNetscape export
-
-The MyNetscape export function expects to find fields called
-"title" and "url", and will skip any hash entry which is
-missing either of them.
-
-=back
-
-=head1 FORMAT STRINGS
-
-WebFetch::Input::PerlStruct uses a format string identical to WebFetch::General.
-The default format for retrieved data is
-
-<a href="%url%">%title%</a>
-
-See the WebFetch::General documentation for more details.
+The field names should be consistent through all records.
+WebFetch uses the field names from the first record and assumes the
+remainder are identical.
 
 The names of the fields are chosen by the calling function.
-Though for the convenience of the user,
-the author of an exporting module should keep in mind the
-default WebFetch::Input::PerlStruct format uses fields called "url" and "title".
-If you use fields by different names, make sure your code provides those
-fields in the $content_struct parameter.
+If an array called "wk_names" is provided then it used to map
+well-known field names of the WebFetch Embedding API to field names in
+this data.
+Otherwise, meaning can only be applied to field names if they already
+match WebFetch's well-known field names.
 
 =head1 AUTHOR
 
